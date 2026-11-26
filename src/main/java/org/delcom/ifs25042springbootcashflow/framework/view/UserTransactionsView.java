@@ -31,9 +31,9 @@ public class UserTransactionsView extends VerticalLayout implements HasUrlParame
     private final H1 title = new H1("Transaksi Pengguna");
     private final Paragraph empty = new Paragraph("Belum ada transaksi.");
     private final Span totalCountValue = new Span("0");
-    private final Span incomeTotalValue = new Span("Rp 0.00");
-    private final Span expenseTotalValue = new Span("Rp 0.00");
-    private final Span balanceValue = new Span("Rp 0.00");
+    private final Span incomeTotalValue = new Span(ViewStyles.ZERO_AMOUNT);
+    private final Span expenseTotalValue = new Span(ViewStyles.ZERO_AMOUNT);
+    private final Span balanceValue = new Span(ViewStyles.ZERO_AMOUNT);
 
     public UserTransactionsView(
             UserUseCase userUseCase,
@@ -84,10 +84,7 @@ public class UserTransactionsView extends VerticalLayout implements HasUrlParame
 
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
-        User current = AuthSession.currentUser().orElse(null);
-        if (current == null || !current.isAdmin()) {
-            event.forwardTo(FinanceView.class);
-        }
+        ViewStyles.requireAdmin(event);
     }
 
     @Override

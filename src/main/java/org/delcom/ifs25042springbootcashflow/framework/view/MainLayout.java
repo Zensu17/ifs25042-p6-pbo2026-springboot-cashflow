@@ -69,7 +69,7 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         addToNavbar(header);
     }
 
-    private HorizontalLayout appBrandTitle(String fontSize, String iconSize) {
+    private static HorizontalLayout appBrandTitle(String fontSize, String iconSize) {
         Image logo = new Image("icons/icon.png", "Cashflow");
         logo.setWidth(iconSize);
         logo.setHeight(iconSize);
@@ -103,17 +103,7 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
                 .set(ViewStyles.PROP_OBJECT_FIT, ViewStyles.VAL_COVER)
                 .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_BLOCK);
 
-        headerAvatarInitial.getStyle()
-                .set(ViewStyles.PROP_WIDTH, AVATAR_SIZE)
-                .set(ViewStyles.PROP_HEIGHT, AVATAR_SIZE)
-                .set(ViewStyles.PROP_BORDER_RADIUS, ViewStyles.VAL_ROUND)
-                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_INLINE_FLEX)
-                .set(ViewStyles.PROP_ALIGN_ITEMS, ViewStyles.VAL_CENTER)
-                .set(ViewStyles.PROP_JUSTIFY_CONTENT, ViewStyles.VAL_CENTER)
-                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BLUE_SOFT)
-                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_ACCENT_BLUE)
-                .set(ViewStyles.PROP_FONT_WEIGHT, "700")
-                .set(ViewStyles.PROP_FONT_SIZE, FONT_SIZE_SUB);
+        ViewStyles.styleAvatarInitial(headerAvatarInitial, AVATAR_SIZE, FONT_SIZE_SUB);
 
         headerAvatar.removeAll();
         headerAvatar.add(headerAvatarInitial);
@@ -148,7 +138,7 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         });
     }
 
-    private VerticalLayout accountIdentity(User user) {
+    private static VerticalLayout accountIdentity(User user) {
         Span username = new Span(user.getUsername());
         username.getStyle()
                 .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_BLOCK)
@@ -177,7 +167,7 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         return identity;
     }
 
-    private HorizontalLayout menuItemContent(VaadinIcon iconType, String label, String iconColor, String textColor) {
+    private static HorizontalLayout menuItemContent(VaadinIcon iconType, String label, String iconColor, String textColor) {
         Icon icon = iconType.create();
         icon.setSize("1rem");
         icon.getStyle()
@@ -327,7 +317,7 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         }
     }
 
-    private boolean isNavActive(String prefix, String normalized) {
+    private static boolean isNavActive(String prefix, String normalized) {
         if (prefix.isEmpty()) {
             return normalized.isEmpty();
         }
@@ -337,7 +327,7 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         return normalized.equals(prefix) || normalized.startsWith(prefix + "/");
     }
 
-    private void styleNavChildren(RouterLink link, String iconColor, String textColor, String weight) {
+    private static void styleNavChildren(RouterLink link, String iconColor, String textColor, String weight) {
         link.getChildren()
                 .filter(HorizontalLayout.class::isInstance)
                 .map(HorizontalLayout.class::cast)

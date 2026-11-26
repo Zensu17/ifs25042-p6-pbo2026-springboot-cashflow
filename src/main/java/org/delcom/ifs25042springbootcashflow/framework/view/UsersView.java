@@ -14,7 +14,6 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import org.delcom.ifs25042springbootcashflow.domain.entity.User;
-import org.delcom.ifs25042springbootcashflow.framework.auth.AuthSession;
 import org.delcom.ifs25042springbootcashflow.usecase.UserUseCase;
 
 @Route(value = "users", layout = MainLayout.class)
@@ -69,9 +68,6 @@ public class UsersView extends VerticalLayout implements BeforeEnterObserver {
 
     @Override
     public void beforeEnter(BeforeEnterEvent event) {
-        User current = AuthSession.currentUser().orElse(null);
-        if (current == null || !current.isAdmin()) {
-            event.forwardTo(FinanceView.class);
-        }
+        ViewStyles.requireAdmin(event);
     }
 }

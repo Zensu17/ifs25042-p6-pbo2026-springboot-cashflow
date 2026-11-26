@@ -60,10 +60,7 @@ public class LoginView extends VerticalLayout implements BeforeEnterObserver {
         username.setValueChangeMode(ValueChangeMode.EAGER);
         password.setValueChangeMode(ValueChangeMode.EAGER);
 
-        ProgressBar loadingBar = new ProgressBar();
-        loadingBar.setIndeterminate(true);
-        loadingBar.setVisible(false);
-        loadingBar.setWidthFull();
+        ProgressBar loadingBar = ViewStyles.createLoadingBar();
 
         Button loginButton = new Button("Masuk");
         loginButton.setId("login-submit");
@@ -126,7 +123,7 @@ public class LoginView extends VerticalLayout implements BeforeEnterObserver {
         }
     }
 
-    private void setInnerInputId(Component component, String id) {
+    private static void setInnerInputId(Component component, String id) {
         Runnable apply = () -> component.getElement().executeJs(ASSIGN_INPUT_ID_JS, id);
         apply.run();
         component.addAttachListener(event -> apply.run());

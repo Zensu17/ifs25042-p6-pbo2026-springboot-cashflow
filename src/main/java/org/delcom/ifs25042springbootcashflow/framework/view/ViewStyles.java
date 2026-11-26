@@ -1,5 +1,7 @@
 package org.delcom.ifs25042springbootcashflow.framework.view;
 
+import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
@@ -8,7 +10,10 @@ import com.vaadin.flow.component.notification.NotificationVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.progressbar.ProgressBar;
+import com.vaadin.flow.router.BeforeEnterEvent;
 import org.delcom.ifs25042springbootcashflow.domain.entity.User;
+import org.delcom.ifs25042springbootcashflow.framework.auth.AuthSession;
 
 /**
  * Konstanta CSS dan helper komponen UI bersama untuk menghindari duplikasi kode pada layer view.
@@ -69,6 +74,10 @@ final class ViewStyles {
     static final String COLOR_BLUE_SOFT = "#DBEAFE";
     static final String COLOR_BLUE_BORDER = "#93C5FD";
     static final String BORDER_LIGHT = "1px solid #E5E7EB";
+    static final String BORDER_RADIUS_CARD = "12px";
+
+    static final String ZERO_AMOUNT = "Rp 0.00";
+    static final String LABEL_CANCEL = "Batal";
 
     private static final String REMOVE_OVERLAY_PADDING_JS = """
             const overlay = this.$.overlay;
@@ -97,6 +106,92 @@ final class ViewStyles {
                 dialog.getElement().executeJs(REMOVE_OVERLAY_PADDING_JS);
             }
         });
+    }
+
+    static ProgressBar createLoadingBar() {
+        ProgressBar bar = new ProgressBar();
+        bar.setIndeterminate(true);
+        bar.setVisible(false);
+        bar.setWidthFull();
+        return bar;
+    }
+
+    static Div createDialogHeader(String title, String background, Component... extra) {
+        Span headerTitle = new Span(title);
+        headerTitle.getStyle()
+                .set(PROP_MARGIN, VAL_ZERO)
+                .set(PROP_COLOR, COLOR_WHITE)
+                .set(PROP_FONT_SIZE, "1.125rem")
+                .set(PROP_FONT_WEIGHT, "600")
+                .set(PROP_LINE_HEIGHT, "1.4");
+
+        Div header = new Div(headerTitle);
+        for (Component component : extra) {
+            header.add(component);
+        }
+        header.getStyle()
+                .set(PROP_BACKGROUND, background)
+                .set(PROP_PADDING, "1rem 1.5rem")
+                .set(PROP_BOX_SIZING, VAL_BORDER_BOX)
+                .set(PROP_WIDTH, VAL_FULL);
+        return header;
+    }
+
+    static Div createDialogFooter(String gap, Button... buttons) {
+        Div footer = new Div();
+        footer.getStyle()
+                .set(PROP_DISPLAY, VAL_FLEX)
+                .set(PROP_JUSTIFY_CONTENT, VAL_FLEX_END)
+                .set(PROP_ALIGN_ITEMS, VAL_CENTER)
+                .set(PROP_GAP, gap)
+                .set(PROP_BACKGROUND, COLOR_BG)
+                .set(PROP_BORDER_TOP, BORDER_LIGHT)
+                .set(PROP_PADDING, "0.85rem 1.5rem 1.1rem")
+                .set(PROP_BOX_SIZING, VAL_BORDER_BOX)
+                .set(PROP_WIDTH, VAL_FULL);
+        for (Button btn : buttons) {
+            btn.getStyle().set(PROP_CURSOR, VAL_POINTER);
+        }
+        footer.add(buttons);
+        return footer;
+    }
+
+    static void mountDialogShell(Dialog dialog, Component... sections) {
+        Div shell = new Div(sections);
+        shell.getStyle()
+                .set(PROP_DISPLAY, VAL_FLEX)
+                .set(PROP_FLEX_DIRECTION, VAL_COLUMN)
+                .set(PROP_WIDTH, VAL_FULL)
+                .set(PROP_OVERFLOW, VAL_HIDDEN)
+                .set(PROP_BORDER_RADIUS, BORDER_RADIUS_CARD)
+                .set(PROP_BACKGROUND, COLOR_WHITE);
+
+        dialog.removeAll();
+        dialog.add(shell);
+        removeOverlayPadding(dialog);
+    }
+
+    static void styleAvatarInitial(Span initial, String size, String fontSize) {
+        initial.getStyle()
+                .set(PROP_WIDTH, size)
+                .set(PROP_HEIGHT, size)
+                .set(PROP_BORDER_RADIUS, VAL_ROUND)
+                .set(PROP_DISPLAY, VAL_INLINE_FLEX)
+                .set(PROP_ALIGN_ITEMS, VAL_CENTER)
+                .set(PROP_JUSTIFY_CONTENT, VAL_CENTER)
+                .set(PROP_BACKGROUND, COLOR_BLUE_SOFT)
+                .set(PROP_COLOR, COLOR_ACCENT_BLUE)
+                .set(PROP_FONT_WEIGHT, "700")
+                .set(PROP_FONT_SIZE, fontSize);
+    }
+
+    static boolean requireAdmin(BeforeEnterEvent event) {
+        User current = AuthSession.currentUser().orElse(null);
+        if (current == null || !current.isAdmin()) {
+            event.forwardTo(FinanceView.class);
+            return false;
+        }
+        return true;
     }
 
     static void showSuccess(String message) {
@@ -181,7 +276,7 @@ final class ViewStyles {
                 .set("max-width", "420px")
                 .set(PROP_BACKGROUND, COLOR_WHITE)
                 .set(PROP_BORDER, BORDER_LIGHT)
-                .set(PROP_BORDER_RADIUS, "12px")
+                .set(PROP_BORDER_RADIUS, BORDER_RADIUS_CARD)
                 .set(PROP_PADDING, "1.35rem 1.35rem")
                 .set("box-shadow", "0 8px 24px rgba(15, 23, 42, 0.08)")
                 .set(PROP_BOX_SIZING, VAL_BORDER_BOX);

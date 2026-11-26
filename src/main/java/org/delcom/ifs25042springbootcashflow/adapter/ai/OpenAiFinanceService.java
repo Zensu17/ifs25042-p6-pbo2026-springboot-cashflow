@@ -25,6 +25,8 @@ import java.util.Map;
 public class OpenAiFinanceService implements IFinanceAiService {
 
     private static final String KEY_CONTENT = "content";
+    private static final String KEY_DESCRIPTION = "description";
+    private static final String KEY_AMOUNT = "amount";
     private static final String SYSTEM_INSTRUCTION = """
             Anda adalah asisten pencatatan keuangan cerdas.
             Tugas Anda adalah menghasilkan daftar transaksi keuangan berdasarkan catatan/instruksi pengguna.
@@ -100,13 +102,13 @@ public class OpenAiFinanceService implements IFinanceAiService {
             return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new DomainException("Pemanggilan API AI terinterupsi: " + e.getMessage());
+            throw new DomainException("Pemanggilan API AI terinterupsi: " + e.getMessage(), e);
         } catch (IOException e) {
-            throw new DomainException("Gagal menghubungi server AI: " + e.getMessage());
+            throw new DomainException("Gagal menghubungi server AI: " + e.getMessage(), e);
         }
     }
 
-    private String normalizeEndpoint(String ep) {
+    private static String normalizeEndpoint(String ep) {
         String base = ep.endsWith("/") ? ep.substring(0, ep.length() - 1) : ep;
         if (base.endsWith("/chat/completions")) {
             return base;
@@ -127,7 +129,7 @@ public class OpenAiFinanceService implements IFinanceAiService {
             );
             return objectMapper.writeValueAsString(payload);
         } catch (Exception e) {
-            throw new DomainException("Gagal menyusun request AI: " + e.getMessage());
+            throw new DomainException("Gagal menyusun request AI: " + e.getMessage(), e);
         }
     }
 
@@ -155,7 +157,7 @@ public class OpenAiFinanceService implements IFinanceAiService {
         } catch (DomainException e) {
             throw e;
         } catch (Exception e) {
-            throw new DomainException("Gagal memproses respon dari AI: " + e.getMessage());
+            throw new DomainException("Gagal memproses respon dari AI: " + e.getMessage(), e);
         }
     }
 
@@ -172,9 +174,9 @@ public class OpenAiFinanceService implements IFinanceAiService {
         return message.get(KEY_CONTENT).asString("").trim();
     }
 
-    private AiGeneratedTransaction parseItem(JsonNode item) {
-        JsonNode descNode = item.get("description");
-        JsonNode amountNode = item.get("amount");
+    private static AiGeneratedTransaction parseItem(JsonNode item) {
+        JsonNode descNode = item.get(KEY_DESCRIPTION);
+        JsonNode amountNode = item.get(KEY_AMOUNT);
         TransactionType type = parseType(item.get("type"));
         if (descNode == null || descNode.asString("").isBlank() || amountNode == null || type == null) {
             return null;
@@ -186,7 +188,7 @@ public class OpenAiFinanceService implements IFinanceAiService {
         return new AiGeneratedTransaction(descNode.asString("").trim(), amount, type);
     }
 
-    private TransactionType parseType(JsonNode typeNode) {
+    private static TransactionType parseType(JsonNode typeNode) {
         if (typeNode == null) {
             return null;
         }
@@ -198,7 +200,7 @@ public class OpenAiFinanceService implements IFinanceAiService {
         };
     }
 
-    private String stripMarkdownCodeFence(String text) {
+    private static String stripMarkdownCodeFence(String text) {
         String trimmed = text.trim();
         if (trimmed.startsWith("```")) {
             int firstNewline = trimmed.indexOf('\n');

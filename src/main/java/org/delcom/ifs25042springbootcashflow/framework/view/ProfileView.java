@@ -80,10 +80,7 @@ public class ProfileView extends VerticalLayout {
         upload.setMaxFiles(1);
         upload.setWidthFull();
 
-        ProgressBar loadingBar = new ProgressBar();
-        loadingBar.setIndeterminate(true);
-        loadingBar.setVisible(false);
-        loadingBar.setWidthFull();
+        ProgressBar loadingBar = ViewStyles.createLoadingBar();
 
         Button savePhoto = new Button("Simpan Foto");
         savePhoto.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
@@ -200,17 +197,7 @@ public class ProfileView extends VerticalLayout {
         photoPreview.addClickListener(
                 event -> ImagePreviewDialog.open(photoPreview.getSrc(), photoPreview.getAlt().orElse("Foto profil")));
 
-        photoInitial.getStyle()
-                .set(ViewStyles.PROP_WIDTH, PHOTO_SIZE)
-                .set(ViewStyles.PROP_HEIGHT, PHOTO_SIZE)
-                .set(ViewStyles.PROP_BORDER_RADIUS, ViewStyles.VAL_ROUND)
-                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_INLINE_FLEX)
-                .set(ViewStyles.PROP_ALIGN_ITEMS, ViewStyles.VAL_CENTER)
-                .set(ViewStyles.PROP_JUSTIFY_CONTENT, ViewStyles.VAL_CENTER)
-                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BLUE_SOFT)
-                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_ACCENT_BLUE)
-                .set(ViewStyles.PROP_FONT_WEIGHT, "700")
-                .set(ViewStyles.PROP_FONT_SIZE, "2.5rem");
+        ViewStyles.styleAvatarInitial(photoInitial, PHOTO_SIZE, "2.5rem");
 
         photoFrame.getStyle()
                 .set(ViewStyles.PROP_WIDTH, PHOTO_SIZE)

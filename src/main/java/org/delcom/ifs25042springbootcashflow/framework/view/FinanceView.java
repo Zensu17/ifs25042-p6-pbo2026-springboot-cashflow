@@ -70,9 +70,26 @@ public class FinanceView extends VerticalLayout {
     private final Paragraph statusLabel = new Paragraph();
     private final Span emptyState = new Span(MSG_NO_DATA);
     private final Span totalCountValue = new Span("0");
-    private final Span incomeTotalValue = new Span("Rp 0.00");
-    private final Span expenseTotalValue = new Span("Rp 0.00");
-    private final Span balanceValue = new Span("Rp 0.00");
+    private final Span incomeTotalValue = new Span(ViewStyles.ZERO_AMOUNT);
+    private final Span expenseTotalValue = new Span(ViewStyles.ZERO_AMOUNT);
+    private final Span balanceValue = new Span(ViewStyles.ZERO_AMOUNT);
+
+    private record AiDialogControls(
+            Dialog dialog,
+            TextArea promptArea,
+            ProgressBar loadingBar,
+            Button generateButton,
+            Button applyButton,
+            Button cancelButton,
+            Grid<AiGeneratedTransaction> previewGrid,
+            List<AiGeneratedTransaction> generatedItems
+    ) {
+    }
+
+    @FunctionalInterface
+    private interface TransactionSaveAction {
+        void execute(long amount, String proofPath) throws ValidationException, EntityNotFoundException;
+    }
 
     public FinanceView(
             FinanceUseCase financeUseCase,
@@ -121,7 +138,7 @@ public class FinanceView extends VerticalLayout {
         refreshAll();
     }
 
-    private User requireUser() {
+    private static User requireUser() {
         return AuthSession.currentUser().orElseThrow();
     }
 
@@ -138,7 +155,7 @@ public class FinanceView extends VerticalLayout {
     }
 
     private void configureGrid() {
-        grid.addComponentColumn(this::createProofPreview)
+        grid.addComponentColumn(FinanceView::createProofPreview)
                 .setHeader("Bukti")
                 .setKey("proof")
                 .setAutoWidth(true)
@@ -194,7 +211,7 @@ public class FinanceView extends VerticalLayout {
         GridStyles.apply(grid);
     }
 
-    private Component createProofPreview(Transaction transaction) {
+    private static Component createProofPreview(Transaction transaction) {
         if (transaction.getProofPath() == null || transaction.getProofPath().isBlank()) {
             return new Span("-");
         }
@@ -300,8 +317,7 @@ public class FinanceView extends VerticalLayout {
 
     private void openAiDialog() {
         Dialog dialog = new Dialog();
-        ProgressBar loadingBar = new ProgressBar();
-        loadingBar.setVisible(false);
+        ProgressBar loadingBar = ViewStyles.createLoadingBar();
 
         Span hint = new Span("Masukkan deskripsi/rencana pemasukan atau pengeluaran yang ingin dicatat oleh AI:");
         hint.getStyle()
@@ -322,23 +338,21 @@ public class FinanceView extends VerticalLayout {
         previewGrid.setVisible(false);
         GridStyles.apply(previewGrid);
 
-        List<AiGeneratedTransaction> generatedItems = new ArrayList<>();
-
         Button applyButton = new Button("Tambahkan ke Catatan", VaadinIcon.PLUS_CIRCLE.create());
         applyButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         applyButton.setEnabled(false);
 
-        Button cancelButton = new Button("Batal", VaadinIcon.CLOSE.create(), event -> dialog.close());
+        Button cancelButton = new Button(ViewStyles.LABEL_CANCEL, VaadinIcon.CLOSE.create(), event -> dialog.close());
 
         Button generateButton = new Button("Proses AI", VaadinIcon.MAGIC.create());
         generateButton.addThemeVariants(ButtonVariant.LUMO_SUCCESS);
         generateButton.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
 
-        generateButton.addClickListener(event -> runAiGeneration(
-                promptArea, loadingBar, generateButton, applyButton, cancelButton, previewGrid, generatedItems));
-
-        applyButton.addClickListener(event -> saveAiGeneratedItems(
-                dialog, loadingBar, applyButton, generateButton, cancelButton, generatedItems));
+        AiDialogControls controls = new AiDialogControls(
+                dialog, promptArea, loadingBar, generateButton, applyButton, cancelButton, previewGrid, new ArrayList<>()
+        );
+        generateButton.addClickListener(event -> runAiGeneration(controls));
+        applyButton.addClickListener(event -> saveAiGeneratedItems(controls));
 
         HorizontalLayout promptActionRow = new HorizontalLayout(generateButton);
         promptActionRow.setWidthFull();
@@ -353,16 +367,8 @@ public class FinanceView extends VerticalLayout {
         dialog.open();
     }
 
-    private void runAiGeneration(
-            TextArea promptArea,
-            ProgressBar loadingBar,
-            Button generateButton,
-            Button applyButton,
-            Button cancelButton,
-            Grid<AiGeneratedTransaction> previewGrid,
-            List<AiGeneratedTransaction> generatedItems
-    ) {
-        String promptText = promptArea.getValue();
+    private void runAiGeneration(AiDialogControls controls) {
+        String promptText = controls.promptArea().getValue();
         if (promptText == null || promptText.trim().isEmpty()) {
             ViewStyles.showError("Prompt instruksi tidak boleh kosong");
             return;
@@ -373,7 +379,7 @@ public class FinanceView extends VerticalLayout {
         }
 
         UI ui = UI.getCurrent();
-        setAiBusy(true, loadingBar, generateButton, applyButton, cancelButton, promptArea);
+        setAiBusy(controls, true);
         ui.setPollInterval(400);
 
         String prompt = promptText.trim();
@@ -390,20 +396,20 @@ public class FinanceView extends VerticalLayout {
                     ViewStyles.showError("Gagal menghasilkan konten AI: " + cause.getMessage());
                     return;
                 }
-                generatedItems.clear();
-                generatedItems.addAll(result);
-                previewGrid.setItems(generatedItems);
-                previewGrid.setVisible(true);
-                ViewStyles.showSuccess("AI berhasil menghasilkan " + generatedItems.size() + " catatan transaksi");
+                controls.generatedItems().clear();
+                controls.generatedItems().addAll(result);
+                controls.previewGrid().setItems(controls.generatedItems());
+                controls.previewGrid().setVisible(true);
+                ViewStyles.showSuccess("AI berhasil menghasilkan " + controls.generatedItems().size() + " catatan transaksi");
             } finally {
-                setAiBusy(false, loadingBar, generateButton, applyButton, cancelButton, promptArea);
-                applyButton.setEnabled(!generatedItems.isEmpty());
+                setAiBusy(controls, false);
+                controls.applyButton().setEnabled(!controls.generatedItems().isEmpty());
                 ui.setPollInterval(-1);
             }
         }));
     }
 
-    private Throwable unwrapCause(Throwable error) {
+    private static Throwable unwrapCause(Throwable error) {
         Throwable cause = error;
         while (cause instanceof CompletionException && cause.getCause() != null) {
             cause = cause.getCause();
@@ -411,34 +417,27 @@ public class FinanceView extends VerticalLayout {
         return cause;
     }
 
-    private void saveAiGeneratedItems(
-            Dialog dialog,
-            ProgressBar loadingBar,
-            Button applyButton,
-            Button generateButton,
-            Button cancelButton,
-            List<AiGeneratedTransaction> generatedItems
-    ) {
-        if (generatedItems.isEmpty()) {
+    private void saveAiGeneratedItems(AiDialogControls controls) {
+        if (controls.generatedItems().isEmpty()) {
             ViewStyles.showError("Tidak ada transaksi yang dapat ditambahkan");
             return;
         }
-        loadingBar.setVisible(true);
-        applyButton.setEnabled(false);
-        generateButton.setEnabled(false);
-        cancelButton.setEnabled(false);
+        controls.loadingBar().setVisible(true);
+        controls.applyButton().setEnabled(false);
+        controls.generateButton().setEnabled(false);
+        controls.cancelButton().setEnabled(false);
         try {
             User user = requireUser();
-            financeAiUseCase.saveGeneratedTransactions(user.getId(), generatedItems);
-            ViewStyles.showSuccess("Berhasil menambahkan " + generatedItems.size() + " transaksi dari AI");
-            dialog.close();
+            financeAiUseCase.saveGeneratedTransactions(user.getId(), controls.generatedItems());
+            ViewStyles.showSuccess("Berhasil menambahkan " + controls.generatedItems().size() + " transaksi dari AI");
+            controls.dialog().close();
             refreshAll();
         } catch (ValidationException ex) {
             ViewStyles.showError(presenter.showValidationError(ex.getMessage()));
-            loadingBar.setVisible(false);
-            applyButton.setEnabled(true);
-            generateButton.setEnabled(true);
-            cancelButton.setEnabled(true);
+            controls.loadingBar().setVisible(false);
+            controls.applyButton().setEnabled(true);
+            controls.generateButton().setEnabled(true);
+            controls.cancelButton().setEnabled(true);
         }
     }
 
@@ -451,48 +450,24 @@ public class FinanceView extends VerticalLayout {
         amountField.setPlaceholder("Contoh: 500000");
         amountField.setWidthFull();
 
-        AtomicReference<String> pendingProofName = new AtomicReference<>();
-        AtomicReference<byte[]> pendingProofData = new AtomicReference<>();
-        Upload upload = imageUpload(pendingProofName, pendingProofData);
-        Span uploadHint = new Span("Bukti transaksi (opsional)");
-
-        Dialog dialog = new Dialog();
-        ProgressBar loadingBar = new ProgressBar();
-        loadingBar.setVisible(false);
-
-        Button saveButton = new Button("Simpan", VaadinIcon.CHECK.create());
-        saveButton.addClickListener(event -> {
-            loadingBar.setVisible(true);
-            saveButton.setEnabled(false);
-            try {
-                User user = requireUser();
-                long amount = financeUseCase.parseAmount(amountField.getValue());
-                String proofPath = storePendingProof(pendingProofName, pendingProofData);
-                Transaction created = financeUseCase.addTransaction(
-                        user.getId(),
-                        descriptionField.getValue(),
-                        amount,
-                        type,
-                        proofPath
-                );
-                ViewStyles.showSuccess(presenter.showAddSuccess(created));
-                dialog.close();
-                refreshAll();
-            } catch (ValidationException | IOException ex) {
-                loadingBar.setVisible(false);
-                saveButton.setEnabled(true);
-                ViewStyles.showError(presenter.showValidationError(ex.getMessage()));
-            }
-        });
-        saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-
-        Button cancelButton = new Button("Batal", VaadinIcon.CLOSE.create(), event -> dialog.close());
-        VerticalLayout body = new VerticalLayout(descriptionField, amountField, uploadHint, upload);
-        body.setPadding(false);
-        body.setSpacing(true);
         String modalTitle = type == TransactionType.INCOME ? "Tambah Pemasukan" : "Tambah Pengeluaran";
-        buildDialog(dialog, modalTitle, DialogTone.PRIMARY, loadingBar, body, cancelButton, saveButton);
-        dialog.open();
+        openTransactionFormDialog(
+                modalTitle,
+                amountField,
+                "Bukti transaksi (opsional)",
+                (amount, proofPath) -> {
+                    Transaction created = financeUseCase.addTransaction(
+                            requireUser().getId(),
+                            descriptionField.getValue(),
+                            amount,
+                            type,
+                            proofPath
+                    );
+                    ViewStyles.showSuccess(presenter.showAddSuccess(created));
+                },
+                descriptionField,
+                amountField
+        );
     }
 
     private void openEditDialog(Transaction transaction) {
@@ -511,33 +486,51 @@ public class FinanceView extends VerticalLayout {
         typeSelect.setValue(transaction.getType());
         typeSelect.setWidthFull();
 
+        openTransactionFormDialog(
+                "Mengubah Transaksi #" + transaction.getId(),
+                amountField,
+                "Ganti bukti transaksi (opsional)",
+                (amount, proofPath) -> {
+                    financeUseCase.updateTransactionForUser(
+                            requireUser().getId(),
+                            transaction.getId(),
+                            descriptionField.getValue(),
+                            amount,
+                            typeSelect.getValue(),
+                            proofPath,
+                            false
+                    );
+                    ViewStyles.showSuccess(presenter.showUpdateSuccess());
+                },
+                descriptionField,
+                amountField,
+                typeSelect
+        );
+    }
+
+    private void openTransactionFormDialog(
+            String modalTitle,
+            TextField amountField,
+            String uploadLabel,
+            TransactionSaveAction saveAction,
+            Component... fields
+    ) {
         AtomicReference<String> pendingProofName = new AtomicReference<>();
         AtomicReference<byte[]> pendingProofData = new AtomicReference<>();
         Upload upload = imageUpload(pendingProofName, pendingProofData);
-        Span uploadHint = new Span("Ganti bukti transaksi (opsional)");
+        Span uploadHint = new Span(uploadLabel);
 
         Dialog dialog = new Dialog();
-        ProgressBar loadingBar = new ProgressBar();
-        loadingBar.setVisible(false);
+        ProgressBar loadingBar = ViewStyles.createLoadingBar();
 
         Button saveButton = new Button("Simpan", VaadinIcon.CHECK.create());
         saveButton.addClickListener(event -> {
             loadingBar.setVisible(true);
             saveButton.setEnabled(false);
             try {
-                User user = requireUser();
                 long amount = financeUseCase.parseAmount(amountField.getValue());
                 String proofPath = storePendingProof(pendingProofName, pendingProofData);
-                financeUseCase.updateTransactionForUser(
-                        user.getId(),
-                        transaction.getId(),
-                        descriptionField.getValue(),
-                        amount,
-                        typeSelect.getValue(),
-                        proofPath,
-                        false
-                );
-                ViewStyles.showSuccess(presenter.showUpdateSuccess());
+                saveAction.execute(amount, proofPath);
                 dialog.close();
                 refreshAll();
             } catch (EntityNotFoundException ex) {
@@ -552,11 +545,13 @@ public class FinanceView extends VerticalLayout {
         });
         saveButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        Button cancelButton = new Button("Batal", VaadinIcon.CLOSE.create(), event -> dialog.close());
-        VerticalLayout body = new VerticalLayout(descriptionField, amountField, typeSelect, uploadHint, upload);
+        Button cancelButton = new Button(ViewStyles.LABEL_CANCEL, VaadinIcon.CLOSE.create(), event -> dialog.close());
+        VerticalLayout body = new VerticalLayout();
         body.setPadding(false);
         body.setSpacing(true);
-        buildDialog(dialog, "Mengubah Transaksi #" + transaction.getId(), DialogTone.PRIMARY, loadingBar, body, cancelButton, saveButton);
+        body.add(fields);
+        body.add(uploadHint, upload);
+        buildDialog(dialog, modalTitle, DialogTone.PRIMARY, loadingBar, body, cancelButton, saveButton);
         dialog.open();
     }
 
@@ -580,8 +575,7 @@ public class FinanceView extends VerticalLayout {
         message.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
 
         Dialog dialog = new Dialog();
-        ProgressBar loadingBar = new ProgressBar();
-        loadingBar.setVisible(false);
+        ProgressBar loadingBar = ViewStyles.createLoadingBar();
 
         Button confirmButton = new Button("Hapus", VaadinIcon.TRASH.create());
         confirmButton.addClickListener(event -> {
@@ -592,7 +586,7 @@ public class FinanceView extends VerticalLayout {
         });
         confirmButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_ERROR);
 
-        Button cancelButton = new Button("Batal", VaadinIcon.CLOSE.create(), event -> dialog.close());
+        Button cancelButton = new Button(ViewStyles.LABEL_CANCEL, VaadinIcon.CLOSE.create(), event -> dialog.close());
         buildDialog(dialog, "Menghapus Transaksi", DialogTone.DANGER, loadingBar, message, cancelButton, confirmButton);
         dialog.open();
     }
@@ -602,7 +596,7 @@ public class FinanceView extends VerticalLayout {
         DANGER
     }
 
-    private void buildDialog(
+    private static void buildDialog(
             Dialog dialog,
             String title,
             DialogTone tone,
@@ -615,25 +609,9 @@ public class FinanceView extends VerticalLayout {
         dialog.setResizable(false);
         dialog.addClassName("cashflow-form-dialog");
 
-        boolean danger = tone == DialogTone.DANGER;
-        String headerBackground = danger ? ViewStyles.COLOR_DANGER : ViewStyles.COLOR_PRIMARY;
+        String headerBackground = tone == DialogTone.DANGER ? ViewStyles.COLOR_DANGER : ViewStyles.COLOR_PRIMARY;
+        Div header = ViewStyles.createDialogHeader(title, headerBackground);
 
-        Span headerTitle = new Span(title);
-        headerTitle.getStyle()
-                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO)
-                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_WHITE)
-                .set(ViewStyles.PROP_FONT_SIZE, "1.125rem")
-                .set(ViewStyles.PROP_FONT_WEIGHT, "600")
-                .set(ViewStyles.PROP_LINE_HEIGHT, "1.4");
-
-        Div header = new Div(headerTitle);
-        header.getStyle()
-                .set(ViewStyles.PROP_BACKGROUND, headerBackground)
-                .set(ViewStyles.PROP_PADDING, "1rem 1.5rem")
-                .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX)
-                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL);
-
-        loadingBar.setIndeterminate(true);
         loadingBar.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO).set(ViewStyles.PROP_HEIGHT, "4px");
 
         Div body = new Div(bodyContent);
@@ -644,34 +622,8 @@ public class FinanceView extends VerticalLayout {
                 .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX)
                 .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL);
 
-        Div footer = new Div();
-        footer.getStyle()
-                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_FLEX)
-                .set(ViewStyles.PROP_JUSTIFY_CONTENT, ViewStyles.VAL_FLEX_END)
-                .set(ViewStyles.PROP_ALIGN_ITEMS, ViewStyles.VAL_CENTER)
-                .set(ViewStyles.PROP_GAP, "0.75rem")
-                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BG)
-                .set(ViewStyles.PROP_BORDER_TOP, ViewStyles.BORDER_LIGHT)
-                .set(ViewStyles.PROP_PADDING, "0.85rem 1.5rem 1.1rem")
-                .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX)
-                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL);
-        for (Button btn : footerButtons) {
-            btn.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
-        }
-        footer.add(footerButtons);
-
-        Div shell = new Div(header, loadingBar, body, footer);
-        shell.getStyle()
-                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_FLEX)
-                .set(ViewStyles.PROP_FLEX_DIRECTION, ViewStyles.VAL_COLUMN)
-                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL)
-                .set(ViewStyles.PROP_OVERFLOW, ViewStyles.VAL_HIDDEN)
-                .set(ViewStyles.PROP_BORDER_RADIUS, "12px")
-                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_WHITE);
-
-        dialog.removeAll();
-        dialog.add(shell);
-        ViewStyles.removeOverlayPadding(dialog);
+        Div footer = ViewStyles.createDialogFooter("0.75rem", footerButtons);
+        ViewStyles.mountDialogShell(dialog, header, loadingBar, body, footer);
     }
 
     private void deleteTransaction(Transaction transaction) {
@@ -731,7 +683,7 @@ public class FinanceView extends VerticalLayout {
         }
     }
 
-    private Upload imageUpload(AtomicReference<String> pendingName, AtomicReference<byte[]> pendingData) {
+    private static Upload imageUpload(AtomicReference<String> pendingName, AtomicReference<byte[]> pendingData) {
         Upload upload = new Upload(UploadHandler.inMemory((metadata, data) -> {
             pendingName.set(metadata.fileName());
             pendingData.set(data);
@@ -742,19 +694,12 @@ public class FinanceView extends VerticalLayout {
         return upload;
     }
 
-    private void setAiBusy(
-            boolean busy,
-            ProgressBar loadingBar,
-            Button generateButton,
-            Button applyButton,
-            Button cancelButton,
-            TextArea promptArea
-    ) {
-        loadingBar.setVisible(busy);
-        generateButton.setEnabled(!busy);
-        generateButton.setText(busy ? "Memproses..." : "Proses AI");
-        applyButton.setEnabled(false);
-        cancelButton.setEnabled(!busy);
-        promptArea.setReadOnly(busy);
+    private static void setAiBusy(AiDialogControls controls, boolean busy) {
+        controls.loadingBar().setVisible(busy);
+        controls.generateButton().setEnabled(!busy);
+        controls.generateButton().setText(busy ? "Memproses..." : "Proses AI");
+        controls.applyButton().setEnabled(false);
+        controls.cancelButton().setEnabled(!busy);
+        controls.promptArea().setReadOnly(busy);
     }
 }

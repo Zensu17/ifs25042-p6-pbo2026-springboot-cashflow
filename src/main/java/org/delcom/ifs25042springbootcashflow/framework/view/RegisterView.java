@@ -42,10 +42,7 @@ public class RegisterView extends VerticalLayout implements BeforeEnterObserver 
         username.setValueChangeMode(ValueChangeMode.EAGER);
         password.setValueChangeMode(ValueChangeMode.EAGER);
 
-        ProgressBar loadingBar = new ProgressBar();
-        loadingBar.setIndeterminate(true);
-        loadingBar.setVisible(false);
-        loadingBar.setWidthFull();
+        ProgressBar loadingBar = ViewStyles.createLoadingBar();
 
         Button registerButton = new Button("Daftar");
 

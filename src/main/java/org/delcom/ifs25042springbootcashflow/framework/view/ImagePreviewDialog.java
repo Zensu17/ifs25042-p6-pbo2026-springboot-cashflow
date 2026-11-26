@@ -27,14 +27,6 @@ final class ImagePreviewDialog {
 
         String title = alt == null || alt.isBlank() ? "Pratinjau Gambar" : alt;
 
-        Span headerTitle = new Span(title);
-        headerTitle.getStyle()
-                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO)
-                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_WHITE)
-                .set(ViewStyles.PROP_FONT_SIZE, "1.125rem")
-                .set(ViewStyles.PROP_FONT_WEIGHT, "600")
-                .set(ViewStyles.PROP_LINE_HEIGHT, "1.4");
-
         Span headerHint = new Span("Klik gambar untuk memperbesar / memperkecil");
         headerHint.getStyle()
                 .set(ViewStyles.PROP_MARGIN_TOP, "0.2rem")
@@ -42,12 +34,7 @@ final class ImagePreviewDialog {
                 .set(ViewStyles.PROP_FONT_SIZE, "0.8rem")
                 .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_BLOCK);
 
-        Div header = new Div(headerTitle, headerHint);
-        header.getStyle()
-                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_PRIMARY)
-                .set(ViewStyles.PROP_PADDING, "0.9rem 1.5rem")
-                .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX)
-                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL);
+        Div header = ViewStyles.createDialogHeader(title, ViewStyles.COLOR_PRIMARY, headerHint);
 
         Image image = new Image(imageUrl, title);
         image.getStyle()
@@ -92,28 +79,10 @@ final class ImagePreviewDialog {
         dialog.setMaxWidth("95vw");
 
         AtomicReference<Double> currentScale = new AtomicReference<>(1.0);
-
-        Runnable applyScale = () -> {
-            double scale = currentScale.get();
-            if (scale <= 1.0) {
-                currentScale.set(1.0);
-                image.getStyle()
-                        .set("transform", "scale(1)")
-                        .set(ViewStyles.PROP_CURSOR, "zoom-in");
-            } else {
-                image.getStyle()
-                        .set("transform", "scale(" + scale + ")")
-                        .set("transform-origin", CENTER_ORIGIN)
-                        .set(ViewStyles.PROP_CURSOR, "zoom-out");
-            }
-        };
+        Runnable applyScale = () -> applyZoomScale(image, currentScale);
 
         image.addClickListener(event -> {
-            if (currentScale.get() > 1.0) {
-                currentScale.set(1.0);
-            } else {
-                currentScale.set(1.8);
-            }
+            currentScale.set(currentScale.get() > 1.0 ? 1.0 : 1.8);
             applyScale.run();
         });
 
@@ -121,43 +90,31 @@ final class ImagePreviewDialog {
             currentScale.set(Math.max(currentScale.get() - 0.4, 1.0));
             applyScale.run();
         });
-        zoomOutButton.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
-
         Button zoomInButton = new Button("Perbesar", VaadinIcon.SEARCH_PLUS.create(), event -> {
             currentScale.set(Math.min(currentScale.get() + 0.4, 3.0));
             applyScale.run();
         });
-        zoomInButton.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
-
         Button closeButton = new Button("Tutup", VaadinIcon.CLOSE.create(), event -> dialog.close());
         closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        closeButton.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
 
-        Div footer = new Div(zoomOutButton, zoomInButton, closeButton);
-        footer.getStyle()
-                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_FLEX)
-                .set(ViewStyles.PROP_JUSTIFY_CONTENT, ViewStyles.VAL_FLEX_END)
-                .set(ViewStyles.PROP_ALIGN_ITEMS, ViewStyles.VAL_CENTER)
-                .set(ViewStyles.PROP_GAP, "0.6rem")
-                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BG)
-                .set(ViewStyles.PROP_BORDER_TOP, ViewStyles.BORDER_LIGHT)
-                .set(ViewStyles.PROP_PADDING, "0.85rem 1.5rem 1.1rem")
-                .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX)
-                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL);
-
-        Div shell = new Div(header, body, footer);
-        shell.getStyle()
-                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_FLEX)
-                .set(ViewStyles.PROP_FLEX_DIRECTION, ViewStyles.VAL_COLUMN)
-                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL)
-                .set(ViewStyles.PROP_OVERFLOW, ViewStyles.VAL_HIDDEN)
-                .set(ViewStyles.PROP_BORDER_RADIUS, "12px")
-                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_WHITE);
-
-        dialog.removeAll();
-        dialog.add(shell);
-        ViewStyles.removeOverlayPadding(dialog);
+        Div footer = ViewStyles.createDialogFooter("0.6rem", zoomOutButton, zoomInButton, closeButton);
+        ViewStyles.mountDialogShell(dialog, header, body, footer);
         dialog.open();
+    }
+
+    private static void applyZoomScale(Image image, AtomicReference<Double> currentScale) {
+        double scale = currentScale.get();
+        if (scale <= 1.0) {
+            currentScale.set(1.0);
+            image.getStyle()
+                    .set("transform", "scale(1)")
+                    .set(ViewStyles.PROP_CURSOR, "zoom-in");
+        } else {
+            image.getStyle()
+                    .set("transform", "scale(" + scale + ")")
+                    .set("transform-origin", CENTER_ORIGIN)
+                    .set(ViewStyles.PROP_CURSOR, "zoom-out");
+        }
     }
 
     static Image clickableThumbnail(String imageUrl, String alt, String height) {

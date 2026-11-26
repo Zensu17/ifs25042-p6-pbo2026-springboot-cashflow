@@ -50,7 +50,7 @@ final class PageCard {
         card.getStyle()
                 .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_WHITE)
                 .set(ViewStyles.PROP_BORDER, ViewStyles.BORDER_LIGHT)
-                .set(ViewStyles.PROP_BORDER_RADIUS, "12px")
+                .set(ViewStyles.PROP_BORDER_RADIUS, ViewStyles.BORDER_RADIUS_CARD)
                 .set(ViewStyles.PROP_PADDING, "1rem 1.1rem")
                 .set("box-shadow", "0 8px 24px rgba(15, 23, 42, 0.06)")
                 .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX);
