@@ -39,6 +39,7 @@ import org.delcom.ifs25042springbootcashflow.usecase.FinanceUseCase;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -562,7 +563,9 @@ public class FinanceView extends VerticalLayout {
         String filename = pendingName.get();
         byte[] data = pendingData.get();
         if (filename != null && !filename.isBlank() && data != null) {
-            return fileStorage.store(PROOF_FOLDER, filename, new ByteArrayInputStream(data));
+            try (InputStream content = new ByteArrayInputStream(data)) {
+                return fileStorage.store(PROOF_FOLDER, filename, content);
+            }
         }
         return null;
     }

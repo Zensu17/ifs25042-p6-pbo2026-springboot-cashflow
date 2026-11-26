@@ -27,6 +27,7 @@ import org.delcom.ifs25042springbootcashflow.usecase.UserUseCase;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Route(value = "profile", layout = MainLayout.class)
@@ -138,16 +139,16 @@ public class ProfileView extends VerticalLayout {
             ProgressBar loadingBar,
             Button savePhoto
     ) {
+        String filename = pendingPhotoName.get();
+        byte[] data = pendingPhotoData.get();
+        if (filename == null || filename.isBlank() || data == null) {
+            ViewStyles.showError("Pilih file foto terlebih dahulu");
+            return;
+        }
         loadingBar.setVisible(true);
         savePhoto.setEnabled(false);
-        try {
-            String filename = pendingPhotoName.get();
-            byte[] data = pendingPhotoData.get();
-            if (filename == null || filename.isBlank() || data == null) {
-                ViewStyles.showError("Pilih file foto terlebih dahulu");
-                return;
-            }
-            String path = fileStorage.store("profiles", filename, new ByteArrayInputStream(data));
+        try (InputStream content = new ByteArrayInputStream(data)) {
+            String path = fileStorage.store("profiles", filename, content);
             User updated = userUseCase.updatePhoto(user.getId(), path);
             AuthSession.refresh(updated);
             refreshPhoto(updated);
