@@ -13,16 +13,20 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class OpenAiFinanceServiceTest {
 
     @Test
+    @SuppressWarnings("unchecked")
     void validatesConfigAndHandlesNetworkAndHttpErrors() throws Exception {
         HttpClient client = mock(HttpClient.class);
         ObjectMapper mapper = new ObjectMapper();
@@ -54,14 +58,31 @@ class OpenAiFinanceServiceTest {
                 .hasMessageContaining("terinterupsi");
         assertThat(Thread.interrupted()).isTrue();
 
-        @SuppressWarnings("unchecked")
-        HttpResponse<String> errorResp = mock(HttpResponse.class);
-        when(errorResp.statusCode()).thenReturn(500);
-        when(errorResp.body()).thenReturn("Internal Error");
-        when(client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(errorResp);
+        HttpResponse<String> clientError = mock(HttpResponse.class);
+        when(clientError.statusCode()).thenReturn(401);
+        when(clientError.body()).thenReturn("Unauthorized");
+        when(client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(clientError);
+        assertThatThrownBy(() -> service.generateTransactions("gaji"))
+                .isInstanceOf(DomainException.class)
+                .hasMessageContaining("401");
+
+        HttpResponse<String> serverError = mock(HttpResponse.class);
+        when(serverError.statusCode()).thenReturn(500);
+        when(serverError.body()).thenReturn("Internal Error");
+        when(client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(serverError);
         assertThatThrownBy(() -> service.generateTransactions("gaji"))
                 .isInstanceOf(DomainException.class)
                 .hasMessageContaining("500");
+
+        HttpResponse<String> okAfterRetry = mock(HttpResponse.class);
+        when(okAfterRetry.statusCode()).thenReturn(200);
+        when(okAfterRetry.body()).thenReturn(wrapChoice("[{\"description\":\"Bonus\",\"amount\":50000,\"type\":\"INCOME\"}]"));
+        HttpClient retryClient = mock(HttpClient.class);
+        when(retryClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(serverError, okAfterRetry);
+        OpenAiFinanceService retryService = new OpenAiFinanceService("https://example.com/v1", "secret", "m", retryClient, mapper);
+        assertThat(retryService.generateTransactions("bonus")).hasSize(1);
+        verify(retryClient, times(2)).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
 
         ObjectMapper brokenMapper = mock(ObjectMapper.class);
         when(brokenMapper.writeValueAsString(any())).thenThrow(new RuntimeException("serialize error"));
@@ -139,7 +160,7 @@ class OpenAiFinanceServiceTest {
 
     private String wrapChoice(String content) throws Exception {
         return new ObjectMapper().writeValueAsString(
-                java.util.Map.of("choices", List.of(java.util.Map.of("message", java.util.Map.of("content", content))))
+                Map.of("choices", List.of(Map.of("message", Map.of("content", content))))
         );
     }
 }

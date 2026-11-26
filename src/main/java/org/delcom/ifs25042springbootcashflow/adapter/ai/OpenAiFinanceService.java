@@ -24,6 +24,16 @@ import java.util.Map;
  */
 public class OpenAiFinanceService implements IFinanceAiService {
 
+    private static final String KEY_CONTENT = "content";
+    private static final String SYSTEM_INSTRUCTION = """
+            Anda adalah asisten pencatatan keuangan cerdas.
+            Tugas Anda adalah menghasilkan daftar transaksi keuangan berdasarkan catatan/instruksi pengguna.
+            Kembalikan HANYA JSON array valid tanpa markdown formatting atau teks tambahan.
+            Setiap elemen array wajib memiliki objek dengan key 'description' (string keterangan singkat), \
+            'amount' (bilangan bulat positif dalam Rupiah), dan 'type' ('INCOME' atau 'EXPENSE').
+            Contoh format: [{"description":"Gaji bulanan","amount":5000000,"type":"INCOME"},\
+            {"description":"Bayar listrik","amount":250000,"type":"EXPENSE"}]""";
+
     private final String endpoint;
     private final String apiKey;
     private final String model;
@@ -31,7 +41,16 @@ public class OpenAiFinanceService implements IFinanceAiService {
     private final ObjectMapper objectMapper;
 
     public OpenAiFinanceService(String endpoint, String apiKey, String model) {
-        this(endpoint, apiKey, model, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build(), new ObjectMapper());
+        this(
+                endpoint,
+                apiKey,
+                model,
+                HttpClient.newBuilder()
+                        .version(HttpClient.Version.HTTP_1_1)
+                        .connectTimeout(Duration.ofSeconds(15))
+                        .build(),
+                new ObjectMapper()
+        );
     }
 
     public OpenAiFinanceService(String endpoint, String apiKey, String model, HttpClient httpClient, ObjectMapper objectMapper) {
@@ -65,21 +84,26 @@ public class OpenAiFinanceService implements IFinanceAiService {
                 .POST(HttpRequest.BodyPublishers.ofString(requestJson))
                 .build();
 
-        HttpResponse<String> response;
+        HttpResponse<String> response = sendRequest(request);
+        if (response.statusCode() >= 500) {
+            response = sendRequest(request);
+        }
+        if (response.statusCode() != 200) {
+            throw new DomainException("Layanan AI mengembalikan error (" + response.statusCode() + "): " + response.body());
+        }
+
+        return parseAiResponse(response.body());
+    }
+
+    private HttpResponse<String> sendRequest(HttpRequest request) throws DomainException {
         try {
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new DomainException("Pemanggilan API AI terinterupsi: " + e.getMessage());
         } catch (IOException e) {
             throw new DomainException("Gagal menghubungi server AI: " + e.getMessage());
         }
-
-        if (response.statusCode() != 200) {
-            throw new DomainException("Layanan AI mengembalikan error (" + response.statusCode() + "): " + response.body());
-        }
-
-        return parseAiResponse(response.body());
     }
 
     private String normalizeEndpoint(String ep) {
@@ -92,20 +116,12 @@ public class OpenAiFinanceService implements IFinanceAiService {
 
     private String buildRequestBody(String prompt) throws DomainException {
         try {
-            String systemInstruction = "Anda adalah asisten pencatatan keuangan cerdas. "
-                    + "Tugas Anda adalah menghasilkan daftar transaksi keuangan berdasarkan catatan/instruksi pengguna. "
-                    + "Kembalikan HANYA JSON array valid tanpa markdown formatting atau teks tambahan. "
-                    + "Setiap elemen array wajib memiliki objek dengan key 'description' (string keterangan singkat), "
-                    + "'amount' (bilangan bulat positif dalam Rupiah), dan 'type' ('INCOME' atau 'EXPENSE'). "
-                    + "Contoh format: [{\"description\":\"Gaji bulanan\",\"amount\":5000000,\"type\":\"INCOME\"},"
-                    + "{\"description\":\"Bayar listrik\",\"amount\":250000,\"type\":\"EXPENSE\"}]";
-
             String selectedModel = (model == null || model.isBlank()) ? "gpt-4o-mini" : model.trim();
             Map<String, Object> payload = Map.of(
                     "model", selectedModel,
                     "messages", List.of(
-                            Map.of("role", "system", "content", systemInstruction),
-                            Map.of("role", "user", "content", prompt)
+                            Map.of("role", "system", KEY_CONTENT, SYSTEM_INSTRUCTION),
+                            Map.of("role", "user", KEY_CONTENT, prompt)
                     ),
                     "temperature", 0.3
             );
@@ -117,36 +133,18 @@ public class OpenAiFinanceService implements IFinanceAiService {
 
     private List<AiGeneratedTransaction> parseAiResponse(String responseBody) throws DomainException {
         try {
-            JsonNode root = objectMapper.readTree(responseBody);
-            JsonNode choices = root.get("choices");
-            if (choices == null || choices.isEmpty()) {
-                throw new DomainException("Respon AI tidak memiliki pilihan (choices)");
-            }
-
-            JsonNode message = choices.get(0).get("message");
-            if (message == null || message.get("content") == null) {
-                throw new DomainException("Konten respon AI kosong");
-            }
-
-            String content = stripMarkdownCodeFence(message.get("content").asText().trim());
-            JsonNode arrayNode = objectMapper.readTree(content);
+            String content = extractContent(responseBody);
+            JsonNode arrayNode = objectMapper.readTree(stripMarkdownCodeFence(content));
             if (!arrayNode.isArray()) {
                 throw new DomainException("Format konten respon AI bukan merupakan JSON array");
             }
 
             List<AiGeneratedTransaction> result = new ArrayList<>();
             for (JsonNode item : arrayNode) {
-                JsonNode descNode = item.get("description");
-                JsonNode amountNode = item.get("amount");
-                TransactionType type = parseType(item.get("type"));
-                if (descNode == null || descNode.asText().isBlank() || amountNode == null || type == null) {
-                    continue;
+                AiGeneratedTransaction parsed = parseItem(item);
+                if (parsed != null) {
+                    result.add(parsed);
                 }
-                long amount = amountNode.asLong(0);
-                if (amount <= 0) {
-                    continue;
-                }
-                result.add(new AiGeneratedTransaction(descNode.asText().trim(), amount, type));
             }
 
             if (result.isEmpty()) {
@@ -161,11 +159,38 @@ public class OpenAiFinanceService implements IFinanceAiService {
         }
     }
 
+    private String extractContent(String responseBody) throws DomainException {
+        JsonNode root = objectMapper.readTree(responseBody);
+        JsonNode choices = root.get("choices");
+        if (choices == null || choices.isEmpty()) {
+            throw new DomainException("Respon AI tidak memiliki pilihan (choices)");
+        }
+        JsonNode message = choices.get(0).get("message");
+        if (message == null || message.get(KEY_CONTENT) == null) {
+            throw new DomainException("Konten respon AI kosong");
+        }
+        return message.get(KEY_CONTENT).asString("").trim();
+    }
+
+    private AiGeneratedTransaction parseItem(JsonNode item) {
+        JsonNode descNode = item.get("description");
+        JsonNode amountNode = item.get("amount");
+        TransactionType type = parseType(item.get("type"));
+        if (descNode == null || descNode.asString("").isBlank() || amountNode == null || type == null) {
+            return null;
+        }
+        long amount = amountNode.asLong(0);
+        if (amount <= 0) {
+            return null;
+        }
+        return new AiGeneratedTransaction(descNode.asString("").trim(), amount, type);
+    }
+
     private TransactionType parseType(JsonNode typeNode) {
         if (typeNode == null) {
             return null;
         }
-        String raw = typeNode.asText().trim().toUpperCase(Locale.ROOT);
+        String raw = typeNode.asString("").trim().toUpperCase(Locale.ROOT);
         return switch (raw) {
             case "INCOME", "PEMASUKAN" -> TransactionType.INCOME;
             case "EXPENSE", "PENGELUARAN" -> TransactionType.EXPENSE;

@@ -25,7 +25,7 @@ public class UsersView extends VerticalLayout implements BeforeEnterObserver {
         setSizeFull();
         setPadding(true);
         setSpacing(false);
-        getStyle().set("background", "#F3F4F6");
+        getStyle().set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BG);
 
         Grid<User> grid = new Grid<>(User.class, false);
         grid.addComponentColumn(user -> {
@@ -36,7 +36,7 @@ public class UsersView extends VerticalLayout implements BeforeEnterObserver {
                     "/uploads/" + user.getPhotoPath(),
                     "Foto",
                     "40px",
-                    "50%"
+                    ViewStyles.VAL_ROUND
             );
         }).setHeader("Foto").setAutoWidth(true);
         grid.addColumn(User::getId).setHeader("ID").setAutoWidth(true);
@@ -47,7 +47,7 @@ public class UsersView extends VerticalLayout implements BeforeEnterObserver {
             Button open = new Button("Lihat Transaksi", event ->
                     UI.getCurrent().navigate(UserTransactionsView.class, user.getId()));
             open.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE);
-            open.getStyle().set("cursor", "pointer");
+            open.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
             return open;
         }).setHeader("Tindakan").setAutoWidth(true);
 
@@ -56,9 +56,11 @@ public class UsersView extends VerticalLayout implements BeforeEnterObserver {
         GridStyles.apply(grid);
 
         H1 title = new H1("Daftar Pengguna");
-        title.getStyle().set("margin", "0");
+        title.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
         Paragraph subtitle = new Paragraph("Admin dapat membuka catatan keuangan pengguna lain (hanya melihat).");
-        subtitle.getStyle().set("margin", "0").set("color", "#4B5563");
+        subtitle.getStyle()
+                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO)
+                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_MUTED);
 
         Div card = PageCard.wrap(title, subtitle, grid);
         add(card);

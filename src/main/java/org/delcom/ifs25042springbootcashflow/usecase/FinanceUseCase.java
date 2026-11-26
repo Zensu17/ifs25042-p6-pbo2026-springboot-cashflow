@@ -17,6 +17,9 @@ import java.util.stream.Stream;
  * Tidak melakukan I/O UI — hanya memproses aturan bisnis dan melempar checked exception domain.
  */
 public class FinanceUseCase {
+    private static final String MSG_AMOUNT_POSITIVE = "Jumlah transaksi harus lebih dari 0";
+    private static final String MSG_DESC_REQUIRED = "Keterangan transaksi tidak boleh kosong";
+
     private final ITransactionRepository transactionRepository;
 
     public FinanceUseCase(ITransactionRepository transactionRepository) {
@@ -69,7 +72,7 @@ public class FinanceUseCase {
             throw new ValidationException("Jumlah transaksi harus berupa angka");
         }
         if (parsed <= 0) {
-            throw new ValidationException("Jumlah transaksi harus lebih dari 0");
+            throw new ValidationException(MSG_AMOUNT_POSITIVE);
         }
         return parsed;
     }
@@ -92,10 +95,10 @@ public class FinanceUseCase {
             String proofPath
     ) throws ValidationException {
         if (description == null || description.trim().isEmpty()) {
-            throw new ValidationException("Keterangan transaksi tidak boleh kosong");
+            throw new ValidationException(MSG_DESC_REQUIRED);
         }
         if (amount <= 0) {
-            throw new ValidationException("Jumlah transaksi harus lebih dari 0");
+            throw new ValidationException(MSG_AMOUNT_POSITIVE);
         }
         if (type == null) {
             throw new ValidationException("Tipe transaksi tidak boleh kosong");
@@ -185,13 +188,13 @@ public class FinanceUseCase {
     ) throws ValidationException {
         if (description != null) {
             if (description.trim().isEmpty()) {
-                throw new ValidationException("Keterangan transaksi tidak boleh kosong");
+                throw new ValidationException(MSG_DESC_REQUIRED);
             }
             tx.changeDescription(description.trim());
         }
         if (amount != null) {
             if (amount <= 0) {
-                throw new ValidationException("Jumlah transaksi harus lebih dari 0");
+                throw new ValidationException(MSG_AMOUNT_POSITIVE);
             }
             tx.changeAmount(amount);
         }

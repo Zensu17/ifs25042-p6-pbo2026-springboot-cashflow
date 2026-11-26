@@ -5,7 +5,6 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
-import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.BeforeEvent;
 import com.vaadin.flow.router.BeforeEnterEvent;
@@ -25,9 +24,9 @@ import org.delcom.ifs25042springbootcashflow.usecase.UserUseCase;
 @PageTitle("Transaksi Pengguna")
 public class UserTransactionsView extends VerticalLayout implements HasUrlParameter<Integer>, BeforeEnterObserver {
 
-    private final UserUseCase userUseCase;
-    private final FinanceUseCase financeUseCase;
-    private final FinancePresenter presenter;
+    private final transient UserUseCase userUseCase;
+    private final transient FinanceUseCase financeUseCase;
+    private final transient FinancePresenter presenter;
     private final Grid<Transaction> grid = new Grid<>(Transaction.class, false);
     private final H1 title = new H1("Transaksi Pengguna");
     private final Paragraph empty = new Paragraph("Belum ada transaksi.");
@@ -48,10 +47,12 @@ public class UserTransactionsView extends VerticalLayout implements HasUrlParame
         setSizeFull();
         setPadding(true);
         setSpacing(false);
-        getStyle().set("background", "#F3F4F6");
+        getStyle().set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BG);
 
-        title.getStyle().set("margin", "0");
-        empty.getStyle().set("margin", "0").set("color", "#4B5563");
+        title.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
+        empty.getStyle()
+                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO)
+                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_MUTED);
 
         grid.addComponentColumn(tx -> {
             if (tx.getProofPath() == null || tx.getProofPath().isBlank()) {
@@ -71,55 +72,14 @@ public class UserTransactionsView extends VerticalLayout implements HasUrlParame
         grid.setSizeFull();
         GridStyles.apply(grid);
 
-        Div card = PageCard.wrap(title, buildSummaryCards(), empty, grid);
+        Div card = PageCard.wrap(
+                title,
+                ViewStyles.buildSummaryCards(totalCountValue, incomeTotalValue, expenseTotalValue, balanceValue),
+                empty,
+                grid
+        );
         add(card);
         expand(card);
-    }
-
-    private HorizontalLayout buildSummaryCards() {
-        HorizontalLayout summary = new HorizontalLayout(
-                createSummaryCard("Total Transaksi", totalCountValue, "#DBEAFE", "#1D4ED8", "#1E40AF"),
-                createSummaryCard("Total Pemasukan", incomeTotalValue, "#DCFCE7", "#16A34A", "#166534"),
-                createSummaryCard("Total Pengeluaran", expenseTotalValue, "#FEE2E2", "#DC2626", "#991B1B"),
-                createSummaryCard("Saldo", balanceValue, "#EDE9FE", "#7C3AED", "#5B21B6")
-        );
-        summary.setWidthFull();
-        summary.setSpacing(true);
-        return summary;
-    }
-
-    private Div createSummaryCard(
-            String label,
-            Span value,
-            String background,
-            String accent,
-            String valueColor
-    ) {
-        Span caption = new Span(label);
-        caption.getStyle()
-                .set("display", "block")
-                .set("font-size", "0.8rem")
-                .set("font-weight", "500")
-                .set("color", accent);
-
-        value.getStyle()
-                .set("display", "block")
-                .set("margin-top", "0.15rem")
-                .set("font-size", "1.1rem")
-                .set("font-weight", "700")
-                .set("color", valueColor);
-
-        Div card = new Div(caption, value);
-        card.getStyle()
-                .set("flex", "1")
-                .set("min-width", "0")
-                .set("background", background)
-                .set("border", "1px solid " + accent)
-                .set("border-left", "4px solid " + accent)
-                .set("border-radius", "10px")
-                .set("padding", "0.5rem 0.8rem")
-                .set("box-sizing", "border-box");
-        return card;
     }
 
     @Override

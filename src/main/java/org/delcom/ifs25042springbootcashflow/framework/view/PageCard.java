@@ -6,7 +6,6 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 
 /**
  * Card konten halaman agar tampilan konsisten.
- * Komponen terakhir (biasanya grid) mengisi sisa tinggi agar tabel tidak terdesak.
  */
 final class PageCard {
 
@@ -22,7 +21,7 @@ final class PageCard {
         body.setPadding(false);
         body.setSpacing(false);
         body.setWidthFull();
-        body.getStyle().set("gap", "0.65rem");
+        body.getStyle().set(ViewStyles.PROP_GAP, "0.65rem");
 
         for (Component component : content) {
             body.add(component);
@@ -30,11 +29,11 @@ final class PageCard {
 
         if (fullHeight) {
             body.setSizeFull();
-            body.getStyle().set("min-height", "0").set("flex", "1 1 auto");
+            body.getStyle().set(ViewStyles.PROP_MIN_HEIGHT, ViewStyles.VAL_ZERO).set("flex", "1 1 auto");
             if (content.length > 0) {
                 Component last = content[content.length - 1];
                 body.setFlexGrow(1, last);
-                last.getElement().getStyle().set("min-height", "0");
+                last.getElement().getStyle().set(ViewStyles.PROP_MIN_HEIGHT, ViewStyles.VAL_ZERO);
             }
         }
 
@@ -43,18 +42,18 @@ final class PageCard {
         if (fullHeight) {
             card.setHeightFull();
             card.getStyle()
-                    .set("display", "flex")
-                    .set("flex-direction", "column")
-                    .set("min-height", "0")
-                    .set("overflow", "hidden");
+                    .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_FLEX)
+                    .set(ViewStyles.PROP_FLEX_DIRECTION, ViewStyles.VAL_COLUMN)
+                    .set(ViewStyles.PROP_MIN_HEIGHT, ViewStyles.VAL_ZERO)
+                    .set(ViewStyles.PROP_OVERFLOW, ViewStyles.VAL_HIDDEN);
         }
         card.getStyle()
-                .set("background", "#FFFFFF")
-                .set("border", "1px solid #E5E7EB")
-                .set("border-radius", "12px")
-                .set("padding", "1rem 1.1rem")
+                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_WHITE)
+                .set(ViewStyles.PROP_BORDER, ViewStyles.BORDER_LIGHT)
+                .set(ViewStyles.PROP_BORDER_RADIUS, "12px")
+                .set(ViewStyles.PROP_PADDING, "1rem 1.1rem")
                 .set("box-shadow", "0 8px 24px rgba(15, 23, 42, 0.06)")
-                .set("box-sizing", "border-box");
+                .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX);
         return card;
     }
 }

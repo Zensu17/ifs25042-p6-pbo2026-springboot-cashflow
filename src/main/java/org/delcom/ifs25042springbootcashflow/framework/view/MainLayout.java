@@ -30,8 +30,13 @@ import java.util.List;
  */
 public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterNavigationObserver {
 
-    private final IUserRepository userRepository;
-    private final List<NavEntry> navEntries = new ArrayList<>();
+    private static final String ATTR_ACTIVE = "data-active";
+    private static final String AVATAR_SIZE = "40px";
+    private static final String FONT_SIZE_SUB = "0.95rem";
+    private static final String BORDER_TRANSPARENT = "1px solid transparent";
+
+    private final transient IUserRepository userRepository;
+    private final transient List<NavEntry> navEntries = new ArrayList<>();
     private final Image headerAvatarImage = new Image();
     private final Span headerAvatarInitial = new Span();
     private final Div headerAvatar = new Div();
@@ -59,8 +64,8 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         header.setWidthFull();
         header.setPadding(true);
         header.getStyle()
-                .set("background", "#FFFFFF")
-                .set("border-bottom", "1px solid #E5E7EB");
+                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_WHITE)
+                .set(ViewStyles.PROP_BORDER_BOTTOM, ViewStyles.BORDER_LIGHT);
         addToNavbar(header);
     }
 
@@ -69,57 +74,57 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         logo.setWidth(iconSize);
         logo.setHeight(iconSize);
         logo.getStyle()
-                .set("display", "block")
-                .set("border-radius", "6px")
-                .set("object-fit", "cover")
-                .set("flex-shrink", "0");
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_BLOCK)
+                .set(ViewStyles.PROP_BORDER_RADIUS, "6px")
+                .set(ViewStyles.PROP_OBJECT_FIT, ViewStyles.VAL_COVER)
+                .set(ViewStyles.PROP_FLEX_SHRINK, ViewStyles.VAL_ZERO);
 
         Span title = new Span("Cashflow");
         title.getStyle()
-                .set("font-size", fontSize)
-                .set("font-weight", "700")
-                .set("margin", "0")
-                .set("color", "#111827")
-                .set("line-height", "1.2");
+                .set(ViewStyles.PROP_FONT_SIZE, fontSize)
+                .set(ViewStyles.PROP_FONT_WEIGHT, "700")
+                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO)
+                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_TEXT_DARK)
+                .set(ViewStyles.PROP_LINE_HEIGHT, "1.2");
 
         HorizontalLayout brand = new HorizontalLayout(logo, title);
         brand.setDefaultVerticalComponentAlignment(FlexComponent.Alignment.CENTER);
         brand.setSpacing(false);
         brand.setPadding(false);
-        brand.getStyle().set("gap", "0.65rem");
+        brand.getStyle().set(ViewStyles.PROP_GAP, "0.65rem");
         return brand;
     }
 
     private void configureHeaderAvatar() {
-        headerAvatarImage.setWidth("40px");
-        headerAvatarImage.setHeight("40px");
+        headerAvatarImage.setWidth(AVATAR_SIZE);
+        headerAvatarImage.setHeight(AVATAR_SIZE);
         headerAvatarImage.getStyle()
-                .set("border-radius", "50%")
-                .set("object-fit", "cover")
-                .set("display", "block");
+                .set(ViewStyles.PROP_BORDER_RADIUS, ViewStyles.VAL_ROUND)
+                .set(ViewStyles.PROP_OBJECT_FIT, ViewStyles.VAL_COVER)
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_BLOCK);
 
         headerAvatarInitial.getStyle()
-                .set("width", "40px")
-                .set("height", "40px")
-                .set("border-radius", "50%")
-                .set("display", "inline-flex")
-                .set("align-items", "center")
-                .set("justify-content", "center")
-                .set("background", "#DBEAFE")
-                .set("color", "#1D4ED8")
-                .set("font-weight", "700")
-                .set("font-size", "0.95rem");
+                .set(ViewStyles.PROP_WIDTH, AVATAR_SIZE)
+                .set(ViewStyles.PROP_HEIGHT, AVATAR_SIZE)
+                .set(ViewStyles.PROP_BORDER_RADIUS, ViewStyles.VAL_ROUND)
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_INLINE_FLEX)
+                .set(ViewStyles.PROP_ALIGN_ITEMS, ViewStyles.VAL_CENTER)
+                .set(ViewStyles.PROP_JUSTIFY_CONTENT, ViewStyles.VAL_CENTER)
+                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BLUE_SOFT)
+                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_ACCENT_BLUE)
+                .set(ViewStyles.PROP_FONT_WEIGHT, "700")
+                .set(ViewStyles.PROP_FONT_SIZE, FONT_SIZE_SUB);
 
         headerAvatar.removeAll();
         headerAvatar.add(headerAvatarInitial);
         headerAvatar.getStyle()
-                .set("cursor", "pointer")
-                .set("border", "2px solid #93C5FD")
-                .set("border-radius", "50%")
-                .set("overflow", "hidden")
-                .set("width", "40px")
-                .set("height", "40px")
-                .set("flex-shrink", "0");
+                .set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER)
+                .set(ViewStyles.PROP_BORDER, "2px solid " + ViewStyles.COLOR_BLUE_BORDER)
+                .set(ViewStyles.PROP_BORDER_RADIUS, ViewStyles.VAL_ROUND)
+                .set(ViewStyles.PROP_OVERFLOW, ViewStyles.VAL_HIDDEN)
+                .set(ViewStyles.PROP_WIDTH, AVATAR_SIZE)
+                .set(ViewStyles.PROP_HEIGHT, AVATAR_SIZE)
+                .set(ViewStyles.PROP_FLEX_SHRINK, ViewStyles.VAL_ZERO);
         headerAvatar.getElement().setAttribute("title", "Menu akun");
 
         ContextMenu accountMenu = new ContextMenu(headerAvatar);
@@ -128,44 +133,47 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         AuthSession.currentUser().ifPresent(user -> {
             var identityItem = accountMenu.addItem(accountIdentity(user));
             identityItem.setEnabled(false);
-            identityItem.getStyle().set("cursor", "default");
-            var profileItem = accountMenu.addItem(menuItemContent(VaadinIcon.USER, "Profil", "#4B5563", "#1F2937"), event ->
-                    UI.getCurrent().navigate(ProfileView.class));
-            profileItem.getStyle().set("cursor", "pointer");
-            var logoutItem = accountMenu.addItem(menuItemContent(VaadinIcon.SIGN_OUT, "Keluar", "#DC2626", "#DC2626"), event -> {
-                AuthSession.logout();
-                UI.getCurrent().getPage().setLocation("login");
-            });
-            logoutItem.getStyle().set("cursor", "pointer");
+            identityItem.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_DEFAULT);
+            var profileItem = accountMenu.addItem(
+                    menuItemContent(VaadinIcon.USER, "Profil", ViewStyles.COLOR_MUTED, ViewStyles.COLOR_TEXT),
+                    event -> UI.getCurrent().navigate(ProfileView.class));
+            profileItem.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
+            var logoutItem = accountMenu.addItem(
+                    menuItemContent(VaadinIcon.SIGN_OUT, "Keluar", ViewStyles.COLOR_DANGER, ViewStyles.COLOR_DANGER),
+                    event -> {
+                        AuthSession.logout();
+                        UI.getCurrent().getPage().setLocation("login");
+                    });
+            logoutItem.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
         });
     }
 
     private VerticalLayout accountIdentity(User user) {
         Span username = new Span(user.getUsername());
         username.getStyle()
-                .set("display", "block")
-                .set("font-weight", "700")
-                .set("font-size", "0.95rem")
-                .set("color", "#111827")
-                .set("margin", "0");
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_BLOCK)
+                .set(ViewStyles.PROP_FONT_WEIGHT, "700")
+                .set(ViewStyles.PROP_FONT_SIZE, FONT_SIZE_SUB)
+                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_TEXT_DARK)
+                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
 
         Span role = new Span(user.getRole().name());
         role.getStyle()
-                .set("display", "block")
-                .set("margin-top", "0.15rem")
-                .set("font-size", "0.75rem")
-                .set("font-weight", "600")
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_BLOCK)
+                .set(ViewStyles.PROP_MARGIN_TOP, "0.15rem")
+                .set(ViewStyles.PROP_FONT_SIZE, "0.75rem")
+                .set(ViewStyles.PROP_FONT_WEIGHT, "600")
                 .set("letter-spacing", "0.02em")
-                .set("color", "#1D4ED8");
+                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_ACCENT_BLUE);
 
         VerticalLayout identity = new VerticalLayout(username, role);
         identity.setPadding(false);
         identity.setSpacing(false);
         identity.setMargin(false);
         identity.getStyle()
-                .set("gap", "0")
-                .set("padding", "0.15rem 0")
-                .set("min-width", "8rem");
+                .set(ViewStyles.PROP_GAP, ViewStyles.VAL_ZERO)
+                .set(ViewStyles.PROP_PADDING, "0.15rem 0")
+                .set(ViewStyles.PROP_MIN_WIDTH, "8rem");
         return identity;
     }
 
@@ -173,15 +181,15 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         Icon icon = iconType.create();
         icon.setSize("1rem");
         icon.getStyle()
-                .set("color", iconColor)
-                .set("flex-shrink", "0")
-                .set("margin", "0");
+                .set(ViewStyles.PROP_COLOR, iconColor)
+                .set(ViewStyles.PROP_FLEX_SHRINK, ViewStyles.VAL_ZERO)
+                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
 
         Span text = new Span(label);
         text.getStyle()
-                .set("color", textColor)
-                .set("font-weight", "600")
-                .set("margin", "0");
+                .set(ViewStyles.PROP_COLOR, textColor)
+                .set(ViewStyles.PROP_FONT_WEIGHT, "600")
+                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
 
         HorizontalLayout content = new HorizontalLayout(icon, text);
         content.setAlignItems(FlexComponent.Alignment.CENTER);
@@ -191,29 +199,18 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         content.setMargin(false);
         content.setWidth(null);
         content.getStyle()
-                .set("gap", "0.5rem")
-                .set("margin", "0")
-                .set("padding", "0")
-                .set("justify-content", "flex-start")
-                .set("display", "inline-flex");
+                .set(ViewStyles.PROP_GAP, "0.5rem")
+                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO)
+                .set(ViewStyles.PROP_PADDING, ViewStyles.VAL_ZERO)
+                .set(ViewStyles.PROP_JUSTIFY_CONTENT, ViewStyles.VAL_FLEX_START)
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_INLINE_FLEX);
         return content;
     }
 
     private void refreshHeaderAvatar(User user) {
-        if (user == null) {
-            headerAvatarInitial.setText("?");
-            headerAvatar.removeAll();
-            headerAvatar.add(headerAvatarInitial);
-            return;
-        }
-
-        String initial = user.getFullName() == null || user.getFullName().isBlank()
-                ? user.getUsername().substring(0, 1).toUpperCase()
-                : user.getFullName().substring(0, 1).toUpperCase();
-        headerAvatarInitial.setText(initial);
-
+        headerAvatarInitial.setText(ViewStyles.userInitial(user));
         headerAvatar.removeAll();
-        if (user.getPhotoPath() != null && !user.getPhotoPath().isBlank()) {
+        if (user != null && user.getPhotoPath() != null && !user.getPhotoPath().isBlank()) {
             headerAvatarImage.setSrc("/uploads/" + user.getPhotoPath() + "?t=" + System.currentTimeMillis());
             headerAvatarImage.setAlt(user.getFullName());
             headerAvatar.add(headerAvatarImage);
@@ -228,19 +225,19 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         drawer.setPadding(false);
         drawer.setSpacing(false);
         drawer.getStyle()
-                .set("background", "#FFFFFF")
-                .set("border-right", "1px solid #E5E7EB");
+                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_WHITE)
+                .set("border-right", ViewStyles.BORDER_LIGHT);
 
         Div brand = new Div();
         brand.getStyle()
-                .set("padding", "1.25rem 1rem 1rem")
-                .set("border-bottom", "1px solid #E5E7EB");
+                .set(ViewStyles.PROP_PADDING, "1.25rem 1rem 1rem")
+                .set(ViewStyles.PROP_BORDER_BOTTOM, ViewStyles.BORDER_LIGHT);
         brand.add(appBrandTitle("1.05rem", "30px"));
 
         VerticalLayout menu = new VerticalLayout();
         menu.setPadding(true);
         menu.setSpacing(false);
-        menu.getStyle().set("gap", "0.35rem").set("padding-top", "1rem");
+        menu.getStyle().set(ViewStyles.PROP_GAP, "0.35rem").set("padding-top", "1rem");
 
         menu.add(navItem("Cashflow Saya", FinanceView.class, "", VaadinIcon.WALLET));
         menu.add(navItem("Profil", ProfileView.class, "profile", VaadinIcon.USER));
@@ -262,42 +259,42 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
     ) {
         Icon icon = iconType.create();
         icon.setSize("1.05rem");
-        icon.getStyle().set("color", "#4B5563");
+        icon.getStyle().set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_MUTED);
 
         Span text = new Span(label);
         text.getStyle()
-                .set("font-size", "0.95rem")
-                .set("font-weight", "500")
-                .set("color", "#1F2937");
+                .set(ViewStyles.PROP_FONT_SIZE, FONT_SIZE_SUB)
+                .set(ViewStyles.PROP_FONT_WEIGHT, "500")
+                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_TEXT);
 
         HorizontalLayout content = new HorizontalLayout(icon, text);
         content.setAlignItems(FlexComponent.Alignment.CENTER);
         content.setSpacing(true);
         content.setPadding(false);
-        content.getStyle().set("gap", "0.65rem");
+        content.getStyle().set(ViewStyles.PROP_GAP, "0.65rem");
 
         RouterLink link = new RouterLink();
         link.setRoute(view);
         link.add(content);
         link.getStyle()
-                .set("display", "block")
-                .set("width", "100%")
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_BLOCK)
+                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL)
                 .set("text-decoration", "none")
-                .set("padding", "0.7rem 0.85rem")
-                .set("border-radius", "10px")
-                .set("box-sizing", "border-box")
-                .set("border", "1px solid transparent")
+                .set(ViewStyles.PROP_PADDING, "0.7rem 0.85rem")
+                .set(ViewStyles.PROP_BORDER_RADIUS, "10px")
+                .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX)
+                .set(ViewStyles.PROP_BORDER, BORDER_TRANSPARENT)
                 .set("transition", "background 0.15s ease")
-                .set("cursor", "pointer");
+                .set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
 
         link.getElement().addEventListener("mouseover", e -> {
-            if (!"true".equals(link.getElement().getAttribute("data-active"))) {
-                link.getStyle().set("background", "#F3F4F6");
+            if (!"true".equals(link.getElement().getAttribute(ATTR_ACTIVE))) {
+                link.getStyle().set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BG);
             }
         });
         link.getElement().addEventListener("mouseout", e -> {
-            if (!"true".equals(link.getElement().getAttribute("data-active"))) {
-                link.getStyle().set("background", "transparent");
+            if (!"true".equals(link.getElement().getAttribute(ATTR_ACTIVE))) {
+                link.getStyle().set(ViewStyles.PROP_BACKGROUND, "transparent");
             }
         });
 
@@ -312,32 +309,32 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         }
 
         for (NavEntry entry : navEntries) {
-            boolean active;
-            if (entry.pathPrefix().isEmpty()) {
-                active = normalized.isEmpty();
-            } else {
-                active = normalized.equals(entry.pathPrefix())
-                        || normalized.startsWith(entry.pathPrefix() + "/");
-            }
-            if ("users".equals(entry.pathPrefix()) && normalized.startsWith("user-transactions")) {
-                active = true;
-            }
-
+            boolean active = isNavActive(entry.pathPrefix(), normalized);
             RouterLink link = entry.link();
             if (active) {
-                link.getElement().setAttribute("data-active", "true");
+                link.getElement().setAttribute(ATTR_ACTIVE, "true");
                 link.getStyle()
-                        .set("background", "#DBEAFE")
-                        .set("border", "1px solid #93C5FD");
-                styleNavChildren(link, "#1D4ED8", "#1E40AF", "600");
+                        .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BLUE_SOFT)
+                        .set(ViewStyles.PROP_BORDER, "1px solid " + ViewStyles.COLOR_BLUE_BORDER);
+                styleNavChildren(link, ViewStyles.COLOR_ACCENT_BLUE, "#1E40AF", "600");
             } else {
-                link.getElement().setAttribute("data-active", "false");
+                link.getElement().setAttribute(ATTR_ACTIVE, "false");
                 link.getStyle()
-                        .set("background", "transparent")
-                        .set("border", "1px solid transparent");
-                styleNavChildren(link, "#4B5563", "#1F2937", "500");
+                        .set(ViewStyles.PROP_BACKGROUND, "transparent")
+                        .set(ViewStyles.PROP_BORDER, BORDER_TRANSPARENT);
+                styleNavChildren(link, ViewStyles.COLOR_MUTED, ViewStyles.COLOR_TEXT, "500");
             }
         }
+    }
+
+    private boolean isNavActive(String prefix, String normalized) {
+        if (prefix.isEmpty()) {
+            return normalized.isEmpty();
+        }
+        if ("users".equals(prefix) && normalized.startsWith("user-transactions")) {
+            return true;
+        }
+        return normalized.equals(prefix) || normalized.startsWith(prefix + "/");
     }
 
     private void styleNavChildren(RouterLink link, String iconColor, String textColor, String weight) {
@@ -347,10 +344,10 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
                 .findFirst()
                 .ifPresent(row -> row.getChildren().forEach(child -> {
                     if (child instanceof Icon icon) {
-                        icon.getStyle().set("color", iconColor);
+                        icon.getStyle().set(ViewStyles.PROP_COLOR, iconColor);
                     }
                     if (child instanceof Span span) {
-                        span.getStyle().set("color", textColor).set("font-weight", weight);
+                        span.getStyle().set(ViewStyles.PROP_COLOR, textColor).set(ViewStyles.PROP_FONT_WEIGHT, weight);
                     }
                 }));
     }

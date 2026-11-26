@@ -15,6 +15,8 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 final class ImagePreviewDialog {
 
+    private static final String CENTER_ORIGIN = "center center";
+
     private ImagePreviewDialog() {
     }
 
@@ -27,61 +29,61 @@ final class ImagePreviewDialog {
 
         Span headerTitle = new Span(title);
         headerTitle.getStyle()
-                .set("margin", "0")
-                .set("color", "#FFFFFF")
-                .set("font-size", "1.125rem")
-                .set("font-weight", "600")
-                .set("line-height", "1.4");
+                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO)
+                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_WHITE)
+                .set(ViewStyles.PROP_FONT_SIZE, "1.125rem")
+                .set(ViewStyles.PROP_FONT_WEIGHT, "600")
+                .set(ViewStyles.PROP_LINE_HEIGHT, "1.4");
 
         Span headerHint = new Span("Klik gambar untuk memperbesar / memperkecil");
         headerHint.getStyle()
-                .set("margin-top", "0.2rem")
-                .set("color", "#BFDBFE")
-                .set("font-size", "0.8rem")
-                .set("display", "block");
+                .set(ViewStyles.PROP_MARGIN_TOP, "0.2rem")
+                .set(ViewStyles.PROP_COLOR, "#BFDBFE")
+                .set(ViewStyles.PROP_FONT_SIZE, "0.8rem")
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_BLOCK);
 
         Div header = new Div(headerTitle, headerHint);
         header.getStyle()
-                .set("background", "#2563EB")
-                .set("padding", "0.9rem 1.5rem")
-                .set("box-sizing", "border-box")
-                .set("width", "100%");
+                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_PRIMARY)
+                .set(ViewStyles.PROP_PADDING, "0.9rem 1.5rem")
+                .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX)
+                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL);
 
         Image image = new Image(imageUrl, title);
         image.getStyle()
-                .set("display", "block")
-                .set("max-width", "100%")
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_BLOCK)
+                .set("max-width", ViewStyles.VAL_FULL)
                 .set("max-height", "68vh")
-                .set("width", "auto")
-                .set("height", "auto")
-                .set("object-fit", "contain")
-                .set("border-radius", "8px")
-                .set("cursor", "zoom-in")
+                .set(ViewStyles.PROP_WIDTH, "auto")
+                .set(ViewStyles.PROP_HEIGHT, "auto")
+                .set(ViewStyles.PROP_OBJECT_FIT, "contain")
+                .set(ViewStyles.PROP_BORDER_RADIUS, "8px")
+                .set(ViewStyles.PROP_CURSOR, "zoom-in")
                 .set("transition", "transform 0.25s ease")
                 .set("user-select", "none");
         image.getElement().setAttribute("title", "Klik untuk zoom");
 
         Div imageWrapper = new Div(image);
         imageWrapper.getStyle()
-                .set("display", "flex")
-                .set("justify-content", "center")
-                .set("align-items", "center")
-                .set("overflow", "auto")
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_FLEX)
+                .set(ViewStyles.PROP_JUSTIFY_CONTENT, ViewStyles.VAL_CENTER)
+                .set(ViewStyles.PROP_ALIGN_ITEMS, ViewStyles.VAL_CENTER)
+                .set(ViewStyles.PROP_OVERFLOW, "auto")
                 .set("max-height", "70vh")
                 .set("max-width", "min(88vw, 860px)")
-                .set("width", "100%")
-                .set("box-sizing", "border-box");
+                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL)
+                .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX);
 
         Div body = new Div(imageWrapper);
         body.getStyle()
-                .set("display", "flex")
-                .set("justify-content", "center")
-                .set("align-items", "center")
-                .set("background", "#FFFFFF")
-                .set("padding", "1rem 1.25rem")
-                .set("box-sizing", "border-box")
-                .set("width", "100%")
-                .set("overflow", "hidden");
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_FLEX)
+                .set(ViewStyles.PROP_JUSTIFY_CONTENT, ViewStyles.VAL_CENTER)
+                .set(ViewStyles.PROP_ALIGN_ITEMS, ViewStyles.VAL_CENTER)
+                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_WHITE)
+                .set(ViewStyles.PROP_PADDING, "1rem 1.25rem")
+                .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX)
+                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL)
+                .set(ViewStyles.PROP_OVERFLOW, ViewStyles.VAL_HIDDEN);
 
         Dialog dialog = new Dialog();
         dialog.setCloseOnEsc(true);
@@ -97,12 +99,12 @@ final class ImagePreviewDialog {
                 currentScale.set(1.0);
                 image.getStyle()
                         .set("transform", "scale(1)")
-                        .set("cursor", "zoom-in");
+                        .set(ViewStyles.PROP_CURSOR, "zoom-in");
             } else {
                 image.getStyle()
                         .set("transform", "scale(" + scale + ")")
-                        .set("transform-origin", "center center")
-                        .set("cursor", "zoom-out");
+                        .set("transform-origin", CENTER_ORIGIN)
+                        .set(ViewStyles.PROP_CURSOR, "zoom-out");
             }
         };
 
@@ -119,64 +121,42 @@ final class ImagePreviewDialog {
             currentScale.set(Math.max(currentScale.get() - 0.4, 1.0));
             applyScale.run();
         });
-        zoomOutButton.getStyle().set("cursor", "pointer");
+        zoomOutButton.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
 
         Button zoomInButton = new Button("Perbesar", VaadinIcon.SEARCH_PLUS.create(), event -> {
             currentScale.set(Math.min(currentScale.get() + 0.4, 3.0));
             applyScale.run();
         });
-        zoomInButton.getStyle().set("cursor", "pointer");
+        zoomInButton.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
 
         Button closeButton = new Button("Tutup", VaadinIcon.CLOSE.create(), event -> dialog.close());
         closeButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        closeButton.getStyle().set("cursor", "pointer");
+        closeButton.getStyle().set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
 
         Div footer = new Div(zoomOutButton, zoomInButton, closeButton);
         footer.getStyle()
-                .set("display", "flex")
-                .set("justify-content", "flex-end")
-                .set("align-items", "center")
-                .set("gap", "0.6rem")
-                .set("background", "#F3F4F6")
-                .set("border-top", "1px solid #E5E7EB")
-                .set("padding", "0.85rem 1.5rem 1.1rem")
-                .set("box-sizing", "border-box")
-                .set("width", "100%");
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_FLEX)
+                .set(ViewStyles.PROP_JUSTIFY_CONTENT, ViewStyles.VAL_FLEX_END)
+                .set(ViewStyles.PROP_ALIGN_ITEMS, ViewStyles.VAL_CENTER)
+                .set(ViewStyles.PROP_GAP, "0.6rem")
+                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BG)
+                .set(ViewStyles.PROP_BORDER_TOP, ViewStyles.BORDER_LIGHT)
+                .set(ViewStyles.PROP_PADDING, "0.85rem 1.5rem 1.1rem")
+                .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX)
+                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL);
 
         Div shell = new Div(header, body, footer);
         shell.getStyle()
-                .set("display", "flex")
-                .set("flex-direction", "column")
-                .set("width", "100%")
-                .set("overflow", "hidden")
-                .set("border-radius", "12px")
-                .set("background", "#FFFFFF");
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_FLEX)
+                .set(ViewStyles.PROP_FLEX_DIRECTION, ViewStyles.VAL_COLUMN)
+                .set(ViewStyles.PROP_WIDTH, ViewStyles.VAL_FULL)
+                .set(ViewStyles.PROP_OVERFLOW, ViewStyles.VAL_HIDDEN)
+                .set(ViewStyles.PROP_BORDER_RADIUS, "12px")
+                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_WHITE);
 
         dialog.removeAll();
         dialog.add(shell);
-
-        dialog.addOpenedChangeListener(event -> {
-            if (event.isOpened()) {
-                dialog.getElement().executeJs("""
-                        const overlay = this.$.overlay;
-                        if (!overlay || !overlay.shadowRoot) {
-                          return;
-                        }
-                        const content = overlay.shadowRoot.querySelector('[part="content"]');
-                        if (content) {
-                          content.style.padding = '0';
-                          content.style.overflow = 'visible';
-                          content.style.maxHeight = 'none';
-                        }
-                        const overlayPart = overlay.shadowRoot.querySelector('[part="overlay"]');
-                        if (overlayPart) {
-                          overlayPart.style.padding = '0';
-                          overlayPart.style.overflow = 'hidden';
-                        }
-                        """);
-            }
-        });
-
+        ViewStyles.removeOverlayPadding(dialog);
         dialog.open();
     }
 
@@ -188,10 +168,10 @@ final class ImagePreviewDialog {
         Image image = new Image(imageUrl, alt);
         image.setHeight(height);
         image.getStyle()
-                .set("border-radius", borderRadius)
-                .set("object-fit", "cover")
-                .set("cursor", "pointer")
-                .set("display", "block");
+                .set(ViewStyles.PROP_BORDER_RADIUS, borderRadius)
+                .set(ViewStyles.PROP_OBJECT_FIT, ViewStyles.VAL_COVER)
+                .set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER)
+                .set(ViewStyles.PROP_DISPLAY, ViewStyles.VAL_BLOCK);
         image.getElement().setAttribute("title", "Klik untuk memperbesar");
         image.addClickListener(event -> open(imageUrl, alt));
         return image;
