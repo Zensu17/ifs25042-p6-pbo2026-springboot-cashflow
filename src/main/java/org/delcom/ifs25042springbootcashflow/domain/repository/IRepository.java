@@ -7,17 +7,17 @@ import java.util.function.Predicate;
 /**
  * Kontrak Generic Repository Port untuk operasi CRUD dan pencarian.
  *
- * @param <T>  tipe entitas domain
- * @param <ID> tipe data identifier entitas
+ * @param <T> tipe entitas domain
+ * @param <K> tipe data identifier entitas
  */
-public interface IRepository<T, ID> {
+public interface IRepository<T, K> {
     List<T> findAll();
 
-    Optional<T> findById(ID id);
+    Optional<T> findById(K id);
 
     T save(T entity);
 
-    boolean deleteById(ID id);
+    boolean deleteById(K id);
 
     void update(T entity);
 

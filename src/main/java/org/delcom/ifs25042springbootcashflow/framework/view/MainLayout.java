@@ -66,6 +66,7 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         header.getStyle()
                 .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_WHITE)
                 .set(ViewStyles.PROP_BORDER_BOTTOM, ViewStyles.BORDER_LIGHT);
+        header.getElement().setAttribute(ViewStyles.ATTR_ROLE, "banner");
         addToNavbar(header);
     }
 
@@ -217,6 +218,8 @@ public class MainLayout extends AppLayout implements BeforeEnterObserver, AfterN
         drawer.getStyle()
                 .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_WHITE)
                 .set("border-right", ViewStyles.BORDER_LIGHT);
+        drawer.getElement().setAttribute(ViewStyles.ATTR_ROLE, "navigation");
+        drawer.getElement().setAttribute("aria-label", "Navigasi Utama");
 
         Div brand = new Div();
         brand.getStyle()

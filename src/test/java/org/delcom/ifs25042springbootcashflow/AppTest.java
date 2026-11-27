@@ -1,5 +1,6 @@
 package org.delcom.ifs25042springbootcashflow;
 
+import com.vaadin.flow.server.AppShellSettings;
 import org.delcom.ifs25042springbootcashflow.domain.repository.IUserRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -7,9 +8,14 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -31,5 +37,14 @@ class AppTest {
             App.main(args);
             springApp.verify(() -> SpringApplication.run(App.class, args));
         }
+    }
+
+    @Test
+    void configurePageAddsMetaDescriptionAndRobotsTxtExists() {
+        App app = new App();
+        AppShellSettings settings = mock(AppShellSettings.class);
+        app.configurePage(settings);
+        verify(settings).addMetaTag(eq("description"), anyString());
+        assertThat(new ClassPathResource("META-INF/resources/robots.txt").exists()).isTrue();
     }
 }

@@ -21,7 +21,6 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.server.streams.UploadHandler;
 import org.delcom.ifs25042springbootcashflow.adapter.presenter.FinancePresenter;
 import org.delcom.ifs25042springbootcashflow.adapter.storage.FileStorage;
 import org.delcom.ifs25042springbootcashflow.domain.entity.AiGeneratedTransaction;
@@ -103,11 +102,8 @@ public class FinanceView extends VerticalLayout {
         this.fileStorage = fileStorage;
         this.financeAiUseCase = financeAiUseCase;
 
-        setSizeFull();
-        setPadding(false);
-        setSpacing(false);
+        ViewStyles.styleContentPage(this, false);
         getStyle()
-                .set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BG)
                 .set(ViewStyles.PROP_PADDING, "0.75rem")
                 .set(ViewStyles.PROP_MIN_HEIGHT, ViewStyles.VAL_ZERO)
                 .set(ViewStyles.PROP_BOX_SIZING, ViewStyles.VAL_BORDER_BOX);
@@ -156,7 +152,7 @@ public class FinanceView extends VerticalLayout {
     }
 
     private void configureGrid() {
-        grid.addComponentColumn(FinanceView::createProofPreview)
+        grid.addComponentColumn(ViewStyles::createProofThumbnail)
                 .setHeader("Bukti")
                 .setKey("proof")
                 .setAutoWidth(true)
@@ -210,17 +206,6 @@ public class FinanceView extends VerticalLayout {
         grid.addItemDoubleClickListener(event -> openEditDialog(event.getItem()));
         grid.setSizeFull();
         GridStyles.apply(grid);
-    }
-
-    private static Component createProofPreview(Transaction transaction) {
-        if (transaction.getProofPath() == null || transaction.getProofPath().isBlank()) {
-            return new Span("-");
-        }
-        return ImagePreviewDialog.clickableThumbnail(
-                "/uploads/" + transaction.getProofPath(),
-                "Bukti Transaksi #" + transaction.getId(),
-                "48px"
-        );
     }
 
     private Span createTypeBadge(Transaction transaction) {
@@ -518,7 +503,7 @@ public class FinanceView extends VerticalLayout {
     ) {
         AtomicReference<String> pendingProofName = new AtomicReference<>();
         AtomicReference<byte[]> pendingProofData = new AtomicReference<>();
-        Upload upload = imageUpload(pendingProofName, pendingProofData);
+        Upload upload = ViewStyles.createImageUpload(pendingProofName, pendingProofData);
         Span uploadHint = new Span(uploadLabel);
 
         Dialog dialog = new Dialog();
@@ -684,17 +669,6 @@ public class FinanceView extends VerticalLayout {
         } else {
             statusLabel.setText(title + " · " + presenter.formatBalance(financeUseCase.getBalance(userId)));
         }
-    }
-
-    private static Upload imageUpload(AtomicReference<String> pendingName, AtomicReference<byte[]> pendingData) {
-        Upload upload = new Upload(UploadHandler.inMemory((metadata, data) -> {
-            pendingName.set(metadata.fileName());
-            pendingData.set(data);
-        }));
-        upload.setAcceptedMimeTypes("image/png", "image/jpeg", "image/webp");
-        upload.setAcceptedFileExtensions(".png", ".jpg", ".jpeg", ".webp");
-        upload.setMaxFiles(1);
-        return upload;
     }
 
     private static void setAiBusy(AiDialogControls controls, boolean busy) {

@@ -44,26 +44,14 @@ public class UserTransactionsView extends VerticalLayout implements HasUrlParame
         this.financeUseCase = financeUseCase;
         this.presenter = presenter;
 
-        setSizeFull();
-        setPadding(true);
-        setSpacing(false);
-        getStyle().set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BG);
+        ViewStyles.styleContentPage(this, true);
 
         title.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
         empty.getStyle()
                 .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO)
                 .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_MUTED);
 
-        grid.addComponentColumn(tx -> {
-            if (tx.getProofPath() == null || tx.getProofPath().isBlank()) {
-                return new Span("-");
-            }
-            return ImagePreviewDialog.clickableThumbnail(
-                    "/uploads/" + tx.getProofPath(),
-                    "Bukti Transaksi #" + tx.getId(),
-                    "48px"
-            );
-        }).setHeader("Bukti").setAutoWidth(true);
+        grid.addComponentColumn(ViewStyles::createProofThumbnail).setHeader("Bukti").setAutoWidth(true);
         grid.addColumn(Transaction::getId).setHeader("ID").setAutoWidth(true);
         grid.addColumn(Transaction::getDescription).setHeader("Keterangan").setFlexGrow(1);
         grid.addColumn(tx -> presenter.formatAmount(tx.getAmount())).setHeader("Jumlah").setAutoWidth(true);

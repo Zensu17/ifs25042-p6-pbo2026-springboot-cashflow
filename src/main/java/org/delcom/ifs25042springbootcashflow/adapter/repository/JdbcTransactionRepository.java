@@ -5,15 +5,12 @@ import org.delcom.ifs25042springbootcashflow.domain.entity.TransactionType;
 import org.delcom.ifs25042springbootcashflow.domain.repository.ITransactionRepository;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -22,67 +19,41 @@ import java.util.function.Predicate;
  * Repository transaksi keuangan berbasis JDBC (PostgreSQL).
  */
 public class JdbcTransactionRepository implements ITransactionRepository {
-    private final DataSource dataSource;
+    private static final String SELECT_COLUMNS =
+            "SELECT id, user_id, description, amount, type, proof_path, created_at FROM transactions";
+    private final JdbcHelper jdbc;
 
     public JdbcTransactionRepository(DataSource dataSource) {
-        this.dataSource = dataSource;
+        this.jdbc = new JdbcHelper(dataSource);
     }
 
     @Override
     public List<Transaction> findAll() {
-        String sql = """
-                SELECT id, user_id, description, amount, type, proof_path, created_at
-                FROM transactions ORDER BY created_at DESC, id DESC
-                """;
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql);
-             ResultSet rs = statement.executeQuery()) {
-            List<Transaction> transactions = new ArrayList<>();
-            while (rs.next()) {
-                transactions.add(mapRow(rs));
-            }
-            return transactions;
-        } catch (SQLException ex) {
-            throw new IllegalStateException("Gagal membaca daftar transaksi", ex);
-        }
+        return jdbc.queryList(
+                SELECT_COLUMNS + " ORDER BY created_at DESC, id DESC",
+                JdbcTransactionRepository::mapRow,
+                "Gagal membaca daftar transaksi"
+        );
     }
 
     @Override
     public List<Transaction> findByUserId(int userId) {
-        String sql = """
-                SELECT id, user_id, description, amount, type, proof_path, created_at
-                FROM transactions WHERE user_id = ? ORDER BY created_at DESC, id DESC
-                """;
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setInt(1, userId);
-            try (ResultSet rs = statement.executeQuery()) {
-                List<Transaction> transactions = new ArrayList<>();
-                while (rs.next()) {
-                    transactions.add(mapRow(rs));
-                }
-                return transactions;
-            }
-        } catch (SQLException ex) {
-            throw new IllegalStateException("Gagal membaca transaksi pengguna", ex);
-        }
+        return jdbc.queryList(
+                SELECT_COLUMNS + " WHERE user_id = ? ORDER BY created_at DESC, id DESC",
+                statement -> statement.setInt(1, userId),
+                JdbcTransactionRepository::mapRow,
+                "Gagal membaca transaksi pengguna"
+        );
     }
 
     @Override
     public Optional<Transaction> findById(Integer id) {
-        String sql = """
-                SELECT id, user_id, description, amount, type, proof_path, created_at
-                FROM transactions WHERE id = ?
-                """;
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setInt(1, id);
-            try (ResultSet rs = statement.executeQuery()) {
-                return rs.next() ? Optional.of(mapRow(rs)) : Optional.empty();
-            }
-        } catch (SQLException ex) {
-            throw new IllegalStateException("Gagal membaca transaksi", ex);
-        }
+        return jdbc.queryOptional(
+                SELECT_COLUMNS + " WHERE id = ?",
+                statement -> statement.setInt(1, id),
+                JdbcTransactionRepository::mapRow,
+                "Gagal membaca transaksi"
+        );
     }
 
     @Override
@@ -97,40 +68,29 @@ public class JdbcTransactionRepository implements ITransactionRepository {
                 VALUES (?, ?, ?, ?, ?, ?)
                 """;
         LocalDateTime createdAt = LocalDateTime.now();
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            statement.setInt(1, userId);
-            statement.setString(2, description);
-            statement.setLong(3, amount);
-            statement.setString(4, type.name());
-            if (proofPath == null) {
-                statement.setNull(5, Types.VARCHAR);
-            } else {
-                statement.setString(5, proofPath);
-            }
-            statement.setTimestamp(6, Timestamp.valueOf(createdAt));
-            statement.executeUpdate();
-            try (ResultSet keys = statement.getGeneratedKeys()) {
-                if (!keys.next()) {
-                    throw new IllegalStateException("Gagal mendapatkan ID transaksi baru");
-                }
-                return new Transaction(keys.getInt(1), userId, description, amount, type, proofPath, createdAt);
-            }
-        } catch (SQLException ex) {
-            throw new IllegalStateException("Gagal menyimpan transaksi", ex);
-        }
+        int id = jdbc.insertReturningId(
+                sql,
+                statement -> {
+                    statement.setInt(1, userId);
+                    statement.setString(2, description);
+                    statement.setLong(3, amount);
+                    statement.setString(4, type.name());
+                    setNullableString(statement, 5, proofPath);
+                    statement.setTimestamp(6, Timestamp.valueOf(createdAt));
+                },
+                "Gagal mendapatkan ID transaksi baru",
+                "Gagal menyimpan transaksi"
+        );
+        return new Transaction(id, userId, description, amount, type, proofPath, createdAt);
     }
 
     @Override
     public boolean deleteById(Integer id) {
-        String sql = "DELETE FROM transactions WHERE id = ?";
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setInt(1, id);
-            return statement.executeUpdate() > 0;
-        } catch (SQLException ex) {
-            throw new IllegalStateException("Gagal menghapus transaksi", ex);
-        }
+        return jdbc.executeUpdate(
+                "DELETE FROM transactions WHERE id = ?",
+                statement -> statement.setInt(1, id),
+                "Gagal menghapus transaksi"
+        ) > 0;
     }
 
     @Override
@@ -140,26 +100,30 @@ public class JdbcTransactionRepository implements ITransactionRepository {
                 SET description = ?, amount = ?, type = ?, proof_path = ?
                 WHERE id = ?
                 """;
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, entity.getDescription());
-            statement.setLong(2, entity.getAmount());
-            statement.setString(3, entity.getType().name());
-            if (entity.getProofPath() == null) {
-                statement.setNull(4, Types.VARCHAR);
-            } else {
-                statement.setString(4, entity.getProofPath());
-            }
-            statement.setInt(5, entity.getId());
-            statement.executeUpdate();
-        } catch (SQLException ex) {
-            throw new IllegalStateException("Gagal mengubah transaksi", ex);
-        }
+        jdbc.executeUpdate(
+                sql,
+                statement -> {
+                    statement.setString(1, entity.getDescription());
+                    statement.setLong(2, entity.getAmount());
+                    statement.setString(3, entity.getType().name());
+                    setNullableString(statement, 4, entity.getProofPath());
+                    statement.setInt(5, entity.getId());
+                },
+                "Gagal mengubah transaksi"
+        );
     }
 
     @Override
     public List<Transaction> findBy(Predicate<Transaction> predicate) {
         return findAll().stream().filter(predicate).toList();
+    }
+
+    private static void setNullableString(PreparedStatement statement, int index, String value) throws SQLException {
+        if (value == null) {
+            statement.setNull(index, Types.VARCHAR);
+        } else {
+            statement.setString(index, value);
+        }
     }
 
     private static Transaction mapRow(ResultSet rs) throws SQLException {

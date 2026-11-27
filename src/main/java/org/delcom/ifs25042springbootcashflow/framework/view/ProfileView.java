@@ -17,7 +17,6 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.server.streams.UploadHandler;
 import org.delcom.ifs25042springbootcashflow.adapter.storage.FileStorage;
 import org.delcom.ifs25042springbootcashflow.domain.entity.User;
 import org.delcom.ifs25042springbootcashflow.domain.exception.EntityNotFoundException;
@@ -47,10 +46,7 @@ public class ProfileView extends VerticalLayout {
         this.userUseCase = userUseCase;
         this.fileStorage = fileStorage;
 
-        setSizeFull();
-        setPadding(true);
-        setSpacing(false);
-        getStyle().set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BG);
+        ViewStyles.styleContentPage(this, true);
 
         User user = AuthSession.currentUser().orElseThrow();
 
@@ -72,13 +68,7 @@ public class ProfileView extends VerticalLayout {
         AtomicReference<String> pendingPhotoName = new AtomicReference<>();
         AtomicReference<byte[]> pendingPhotoData = new AtomicReference<>();
 
-        Upload upload = new Upload(UploadHandler.inMemory((metadata, data) -> {
-            pendingPhotoName.set(metadata.fileName());
-            pendingPhotoData.set(data);
-        }));
-        upload.setAcceptedMimeTypes("image/png", "image/jpeg", "image/webp");
-        upload.setAcceptedFileExtensions(".png", ".jpg", ".jpeg", ".webp");
-        upload.setMaxFiles(1);
+        Upload upload = ViewStyles.createImageUpload(pendingPhotoName, pendingPhotoData);
         upload.setWidthFull();
 
         ProgressBar loadingBar = ViewStyles.createLoadingBar();
@@ -98,12 +88,9 @@ public class ProfileView extends VerticalLayout {
         saveProfile.addClickListener(event -> handleSaveProfile(
                 user, fullName, password, loadingBar, saveProfile));
 
-        H1 title = new H1("Profil");
-        title.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
-        Paragraph subtitle = new Paragraph("Perbarui nama, password, dan foto profil.");
-        subtitle.getStyle()
-                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO)
-                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_MUTED);
+        H1 title = ViewStyles.createPageHeading("Profil");
+        Paragraph subtitle = ViewStyles.createSubtitle(
+                "Perbarui nama, password, dan foto profil.", ViewStyles.VAL_ZERO);
 
         Span photoLabel = new Span("Foto Profil");
         photoLabel.getStyle()
@@ -209,7 +196,7 @@ public class ProfileView extends VerticalLayout {
                 .set(ViewStyles.PROP_FLEX_SHRINK, ViewStyles.VAL_ZERO)
                 .set(ViewStyles.PROP_BACKGROUND, "#EFF6FF");
 
-        photoPlaceholder.getStyle().set(ViewStyles.PROP_COLOR, "#6B7280");
+        photoPlaceholder.getStyle().set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_MUTED);
     }
 
     private void refreshPhoto(User user) {

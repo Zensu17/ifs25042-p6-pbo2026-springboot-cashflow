@@ -1,5 +1,11 @@
 package org.delcom.ifs25042springbootcashflow.config;
 
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponseWrapper;
 import org.delcom.ifs25042springbootcashflow.adapter.ai.OpenAiFinanceService;
 import org.delcom.ifs25042springbootcashflow.adapter.presenter.FinancePresenter;
 import org.delcom.ifs25042springbootcashflow.adapter.repository.JdbcTransactionRepository;
@@ -17,10 +23,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.sql.DataSource;
+import java.io.IOException;
 
 /**
  * Composition root Spring: merakit dependency antar-layer.
@@ -100,6 +108,34 @@ public class AppConfig {
                     location = location + "/";
                 }
                 registry.addResourceHandler("/uploads/**").addResourceLocations(location);
+            }
+        };
+    }
+
+    @Bean
+    public Filter vaadinBuildCacheFilter() {
+        return new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(
+                    HttpServletRequest request,
+                    HttpServletResponse response,
+                    FilterChain filterChain
+            ) throws ServletException, IOException {
+                String uri = request.getRequestURI();
+                if (uri != null && uri.startsWith("/VAADIN/build/")) {
+                    response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+                    HttpServletResponse wrapped = new HttpServletResponseWrapper(response) {
+                        @Override
+                        public void setHeader(String name, String value) {
+                            if (!"Cache-Control".equalsIgnoreCase(name)) {
+                                super.setHeader(name, value);
+                            }
+                        }
+                    };
+                    filterChain.doFilter(request, wrapped);
+                    return;
+                }
+                filterChain.doFilter(request, response);
             }
         };
     }

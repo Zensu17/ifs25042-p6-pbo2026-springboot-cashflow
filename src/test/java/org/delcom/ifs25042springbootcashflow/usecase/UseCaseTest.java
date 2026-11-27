@@ -84,6 +84,7 @@ class UseCaseTest {
         User updatedBlankPass = users.updateProfile(u.getId(), "Sari Lagi", "   ");
         assertThat(updatedBlankPass.getFullName()).isEqualTo("Sari Lagi");
         User updatedWithPass = users.updateProfile(u.getId(), "Sari Final", "newpass9");
+        assertThat(updatedWithPass.getFullName()).isEqualTo("Sari Final");
         assertThat(auth.login("sari", "newpass9").getId()).isEqualTo(u.getId());
 
         assertThatThrownBy(() -> users.updatePhoto(u.getId(), null)).isInstanceOf(ValidationException.class);

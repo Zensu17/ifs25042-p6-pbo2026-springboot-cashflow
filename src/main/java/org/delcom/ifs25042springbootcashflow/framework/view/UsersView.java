@@ -21,10 +21,7 @@ import org.delcom.ifs25042springbootcashflow.usecase.UserUseCase;
 public class UsersView extends VerticalLayout implements BeforeEnterObserver {
 
     public UsersView(UserUseCase userUseCase) {
-        setSizeFull();
-        setPadding(true);
-        setSpacing(false);
-        getStyle().set(ViewStyles.PROP_BACKGROUND, ViewStyles.COLOR_BG);
+        ViewStyles.styleContentPage(this, true);
 
         Grid<User> grid = new Grid<>(User.class, false);
         grid.addComponentColumn(user -> {
@@ -54,12 +51,9 @@ public class UsersView extends VerticalLayout implements BeforeEnterObserver {
         grid.setSizeFull();
         GridStyles.apply(grid);
 
-        H1 title = new H1("Daftar Pengguna");
-        title.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
-        Paragraph subtitle = new Paragraph("Admin dapat membuka catatan keuangan pengguna lain (hanya melihat).");
-        subtitle.getStyle()
-                .set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO)
-                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_MUTED);
+        H1 title = ViewStyles.createPageHeading("Daftar Pengguna");
+        Paragraph subtitle = ViewStyles.createSubtitle(
+                "Admin dapat membuka catatan keuangan pengguna lain (hanya melihat).", ViewStyles.VAL_ZERO);
 
         Div card = PageCard.wrap(title, subtitle, grid);
         add(card);

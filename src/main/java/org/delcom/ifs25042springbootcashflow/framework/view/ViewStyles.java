@@ -1,9 +1,15 @@
 package org.delcom.ifs25042springbootcashflow.framework.view;
 
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Key;
+import com.vaadin.flow.component.KeyNotifier;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
+import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.html.Div;
+import com.vaadin.flow.component.html.H1;
+import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
@@ -11,14 +17,24 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
+import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.RouterLink;
+import com.vaadin.flow.server.streams.UploadHandler;
+import org.delcom.ifs25042springbootcashflow.domain.entity.Transaction;
 import org.delcom.ifs25042springbootcashflow.domain.entity.User;
+import org.delcom.ifs25042springbootcashflow.domain.exception.ValidationException;
 import org.delcom.ifs25042springbootcashflow.framework.auth.AuthSession;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Konstanta CSS dan helper komponen UI bersama untuk menghindari duplikasi kode pada layer view.
  */
 final class ViewStyles {
+
+    static final String ATTR_ROLE = "role";
+    static final String ROLE_MAIN = "main";
 
     static final String PROP_CURSOR = "cursor";
     static final String PROP_MARGIN = "margin";
@@ -96,6 +112,14 @@ final class ViewStyles {
               overlayPart.style.overflow = 'hidden';
             }
             """;
+
+    private record CardPalette(String background, String border, String caption, String value) {
+    }
+
+    @FunctionalInterface
+    interface AuthSubmitAction {
+        User execute() throws ValidationException;
+    }
 
     private ViewStyles() {
     }
@@ -211,10 +235,14 @@ final class ViewStyles {
             Span balance
     ) {
         HorizontalLayout summary = new HorizontalLayout(
-                createSummaryCard("Total Transaksi", totalCount, COLOR_BLUE_SOFT, COLOR_ACCENT_BLUE, "#1E40AF"),
-                createSummaryCard("Total Pemasukan", incomeTotal, "#DCFCE7", "#16A34A", "#166534"),
-                createSummaryCard("Total Pengeluaran", expenseTotal, "#FEE2E2", COLOR_DANGER, "#991B1B"),
-                createSummaryCard("Saldo", balance, "#EDE9FE", "#7C3AED", "#5B21B6")
+                createSummaryCard("Total Transaksi", totalCount,
+                        new CardPalette(COLOR_BLUE_SOFT, COLOR_ACCENT_BLUE, "#1E40AF", "#1E3A8A")),
+                createSummaryCard("Total Pemasukan", incomeTotal,
+                        new CardPalette("#DCFCE7", "#16A34A", "#166534", "#14532D")),
+                createSummaryCard("Total Pengeluaran", expenseTotal,
+                        new CardPalette("#FEE2E2", COLOR_DANGER, "#991B1B", "#7F1D1D")),
+                createSummaryCard("Saldo", balance,
+                        new CardPalette("#EDE9FE", "#7C3AED", "#5B21B6", "#4C1D95"))
         );
         summary.setWidthFull();
         summary.setSpacing(true);
@@ -222,19 +250,13 @@ final class ViewStyles {
         return summary;
     }
 
-    static Div createSummaryCard(
-            String label,
-            Span value,
-            String background,
-            String accent,
-            String valueColor
-    ) {
+    private static Div createSummaryCard(String label, Span value, CardPalette palette) {
         Span caption = new Span(label);
         caption.getStyle()
                 .set(PROP_DISPLAY, VAL_BLOCK)
                 .set(PROP_FONT_SIZE, "0.8rem")
-                .set(PROP_FONT_WEIGHT, "500")
-                .set(PROP_COLOR, accent);
+                .set(PROP_FONT_WEIGHT, "600")
+                .set(PROP_COLOR, palette.caption());
 
         value.getStyle()
                 .set(PROP_DISPLAY, VAL_BLOCK)
@@ -242,15 +264,15 @@ final class ViewStyles {
                 .set(PROP_FONT_SIZE, "1.15rem")
                 .set(PROP_FONT_WEIGHT, "700")
                 .set(PROP_LINE_HEIGHT, "1.1")
-                .set(PROP_COLOR, valueColor);
+                .set(PROP_COLOR, palette.value());
 
         Div card = new Div(caption, value);
         card.getStyle()
                 .set("flex", "1")
                 .set(PROP_MIN_WIDTH, VAL_ZERO)
-                .set(PROP_BACKGROUND, background)
-                .set(PROP_BORDER, "1px solid " + accent)
-                .set("border-left", "4px solid " + accent)
+                .set(PROP_BACKGROUND, palette.background())
+                .set(PROP_BORDER, "1px solid " + palette.border())
+                .set("border-left", "4px solid " + palette.border())
                 .set(PROP_BORDER_RADIUS, "10px")
                 .set(PROP_PADDING, "0.55rem 0.85rem")
                 .set(PROP_BOX_SIZING, VAL_BORDER_BOX);
@@ -262,6 +284,91 @@ final class ViewStyles {
         page.setJustifyContentMode(FlexComponent.JustifyContentMode.CENTER);
         page.setAlignItems(FlexComponent.Alignment.CENTER);
         page.getStyle().set(PROP_BACKGROUND, COLOR_BG);
+        page.getElement().setAttribute(ATTR_ROLE, ROLE_MAIN);
+    }
+
+    static void styleContentPage(VerticalLayout page, boolean padded) {
+        page.setSizeFull();
+        page.setPadding(padded);
+        page.setSpacing(false);
+        page.getStyle().set(PROP_BACKGROUND, COLOR_BG);
+        page.getElement().setAttribute(ATTR_ROLE, ROLE_MAIN);
+    }
+
+    static H1 createPageHeading(String text) {
+        H1 heading = new H1(text);
+        heading.getStyle().set(PROP_MARGIN, VAL_ZERO);
+        return heading;
+    }
+
+    static Paragraph createSubtitle(String text, String margin) {
+        Paragraph subtitle = new Paragraph(text);
+        subtitle.getStyle()
+                .set(PROP_MARGIN, margin)
+                .set(PROP_COLOR, COLOR_MUTED);
+        return subtitle;
+    }
+
+    static RouterLink createAuthSwitchLink(String text, Class<? extends Component> target) {
+        RouterLink link = new RouterLink(text, target);
+        link.getStyle()
+                .set("align-self", VAL_FLEX_END)
+                .set("text-align", "right")
+                .set(PROP_CURSOR, VAL_POINTER);
+        return link;
+    }
+
+    static void wireAuthSubmit(
+            Button submitButton,
+            ProgressBar loadingBar,
+            AuthSubmitAction action,
+            KeyNotifier... enterFields
+    ) {
+        Runnable submit = () -> {
+            loadingBar.setVisible(true);
+            submitButton.setEnabled(false);
+            try {
+                User user = action.execute();
+                AuthSession.login(user);
+                UI.getCurrent().navigate(FinanceView.class);
+            } catch (ValidationException ex) {
+                loadingBar.setVisible(false);
+                submitButton.setEnabled(true);
+                showError(ex.getMessage());
+            }
+        };
+
+        submitButton.addClickListener(event -> submit.run());
+        submitButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        submitButton.setWidthFull();
+        submitButton.getStyle()
+                .set(PROP_MARGIN_TOP, "0.85rem")
+                .set(PROP_CURSOR, VAL_POINTER);
+        for (KeyNotifier field : enterFields) {
+            field.addKeyUpListener(Key.ENTER, event -> submit.run());
+        }
+    }
+
+    static Upload createImageUpload(AtomicReference<String> pendingName, AtomicReference<byte[]> pendingData) {
+        Upload upload = new Upload(UploadHandler.inMemory((metadata, data) -> {
+            pendingName.set(metadata.fileName());
+            pendingData.set(data);
+        }));
+        upload.setAcceptedMimeTypes("image/png", "image/jpeg", "image/webp");
+        upload.setAcceptedFileExtensions(".png", ".jpg", ".jpeg", ".webp");
+        upload.setMaxFiles(1);
+        return upload;
+    }
+
+    static Component createProofThumbnail(Transaction transaction) {
+        if (transaction.getProofPath() == null || transaction.getProofPath().isBlank()) {
+            return new Span("-");
+        }
+        return ImagePreviewDialog.clickableThumbnail(
+                "/uploads/" + transaction.getProofPath(),
+                "Bukti Transaksi #" + transaction.getId(),
+                "48px"
+        );
     }
 
     static Div createAuthCard(VerticalLayout form) {

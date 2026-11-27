@@ -1,10 +1,7 @@
 package org.delcom.ifs25042springbootcashflow.framework.view;
 
 import com.vaadin.flow.component.Component;
-import com.vaadin.flow.component.Key;
-import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
-import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -17,8 +14,6 @@ import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
-import org.delcom.ifs25042springbootcashflow.domain.entity.User;
-import org.delcom.ifs25042springbootcashflow.domain.exception.ValidationException;
 import org.delcom.ifs25042springbootcashflow.domain.repository.IUserRepository;
 import org.delcom.ifs25042springbootcashflow.framework.auth.AuthSession;
 import org.delcom.ifs25042springbootcashflow.usecase.AuthUseCase;
@@ -59,51 +54,25 @@ public class LoginView extends VerticalLayout implements BeforeEnterObserver {
         password.setWidthFull();
         username.setValueChangeMode(ValueChangeMode.EAGER);
         password.setValueChangeMode(ValueChangeMode.EAGER);
+        username.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
+        password.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
 
         ProgressBar loadingBar = ViewStyles.createLoadingBar();
-
         Button loginButton = new Button("Masuk");
         loginButton.setId("login-submit");
 
-        Runnable submit = () -> {
-            loadingBar.setVisible(true);
-            loginButton.setEnabled(false);
-            try {
-                User user = authUseCase.login(username.getValue(), password.getValue());
-                AuthSession.login(user);
-                UI.getCurrent().navigate(FinanceView.class);
-            } catch (ValidationException ex) {
-                loadingBar.setVisible(false);
-                loginButton.setEnabled(true);
-                ViewStyles.showError(ex.getMessage());
-            }
-        };
+        ViewStyles.wireAuthSubmit(
+                loginButton,
+                loadingBar,
+                () -> authUseCase.login(username.getValue(), password.getValue()),
+                username,
+                password
+        );
 
-        loginButton.addClickListener(event -> submit.run());
-        loginButton.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        loginButton.setWidthFull();
-        loginButton.getStyle()
-                .set(ViewStyles.PROP_MARGIN_TOP, "0.85rem")
-                .set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
-        username.addKeyUpListener(Key.ENTER, event -> submit.run());
-        password.addKeyUpListener(Key.ENTER, event -> submit.run());
-
-        H1 title = new H1("Masuk");
-        title.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
-
-        Paragraph subtitle = new Paragraph("Masuk untuk mengelola catatan keuangan Cashflow.");
-        subtitle.getStyle()
-                .set(ViewStyles.PROP_MARGIN, "0 0 0.15rem 0")
-                .set(ViewStyles.PROP_COLOR, ViewStyles.COLOR_MUTED);
-
-        RouterLink registerLink = new RouterLink("Belum punya akun? Daftar", RegisterView.class);
-        registerLink.getStyle()
-                .set("align-self", ViewStyles.VAL_FLEX_END)
-                .set("text-align", "right")
-                .set(ViewStyles.PROP_CURSOR, ViewStyles.VAL_POINTER);
-
-        username.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
-        password.getStyle().set(ViewStyles.PROP_MARGIN, ViewStyles.VAL_ZERO);
+        H1 title = ViewStyles.createPageHeading("Masuk");
+        Paragraph subtitle = ViewStyles.createSubtitle(
+                "Masuk untuk mengelola catatan keuangan Cashflow.", "0 0 0.15rem 0");
+        RouterLink registerLink = ViewStyles.createAuthSwitchLink("Belum punya akun? Daftar", RegisterView.class);
 
         VerticalLayout form = new VerticalLayout(
                 title,
