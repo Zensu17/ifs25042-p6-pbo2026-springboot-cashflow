@@ -1,6 +1,8 @@
 package org.delcom.ifs25042springbootcashflow;
 
+import com.vaadin.flow.component.page.Inline;
 import com.vaadin.flow.server.AppShellSettings;
+import com.vaadin.flow.theme.lumo.Lumo;
 import org.delcom.ifs25042springbootcashflow.domain.repository.IUserRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -12,6 +14,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -45,6 +48,9 @@ class AppTest {
         AppShellSettings settings = mock(AppShellSettings.class);
         app.configurePage(settings);
         verify(settings).addMetaTag(eq("description"), anyString());
+        verify(settings).addLink(eq(Lumo.STYLESHEET + "?v-c=25.3.4"), anyMap());
+        verify(settings).addLink(eq("styles.css?v-c=1"), anyMap());
+        verify(settings).addInlineWithContents(anyString(), eq(Inline.Wrapping.NONE));
         assertThat(new ClassPathResource("META-INF/resources/robots.txt").exists()).isTrue();
     }
 }
